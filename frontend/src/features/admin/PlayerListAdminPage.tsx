@@ -8,7 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { PlayerPitchPosition } from '../../components/ui/PlayerPitchPosition';
-import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders } from 'lucide-react';
+import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders, Sparkles } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
 import api from '../../services/api';
 
@@ -64,6 +64,47 @@ export const PlayerListAdminPage = () => {
     }
   }, [selectedPlayer]);
 
+  // Quick Category Assignment Mutation for instant UI refresh
+  const quickAssignCategoryMutation = useMutation({
+    mutationFn: async ({ profileId, categoryId }: { profileId: string; categoryId: string }) => {
+      const res = await api.put(`/player/admin/${profileId}`, {
+        categoryId: categoryId || null
+      });
+      return res.data;
+    },
+    onMutate: async ({ profileId, categoryId }) => {
+      await queryClient.cancelQueries({ queryKey: ['players', 'all'] });
+      const previousPlayers = queryClient.getQueryData(['players', 'all']);
+
+      queryClient.setQueryData(['players', 'all'], (old: any) => {
+        if (!old) return old;
+        const newCat = categories.find((c: any) => c.id === categoryId) || null;
+        return old.map((p: any) => {
+          if (p.id === profileId || p.userId === profileId) {
+            return {
+              ...p,
+              categoryId: categoryId || null,
+              category: newCat
+            };
+          }
+          return p;
+        });
+      });
+
+      return { previousPlayers };
+    },
+    onSuccess: (data) => {
+      toast.success(`Category tier updated to ${data.data.category?.name || 'Unassigned'}!`);
+      queryClient.invalidateQueries({ queryKey: ['players', 'all'] });
+    },
+    onError: (err: any, _vars, context) => {
+      if (context?.previousPlayers) {
+        queryClient.setQueryData(['players', 'all'], context.previousPlayers);
+      }
+      toast.error(err.response?.data?.message || 'Failed to update category tier');
+    }
+  });
+
   const updatePlayerMutation = useMutation({
     mutationFn: async () => {
       const res = await api.put(`/player/admin/${selectedPlayer.id}`, {
@@ -72,14 +113,14 @@ export const PlayerListAdminPage = () => {
       });
       return res.data;
     },
-    onSuccess: () => {
-      toast.success('Player scouting details & category updated!');
+    onSuccess: (data) => {
+      toast.success('Player scouting details & category tier saved!');
       queryClient.invalidateQueries({ queryKey: ['players', 'all'] });
       if (selectedPlayer) {
         setSelectedPlayer((prev: any) => prev ? { 
           ...prev, 
           categoryId: editCategoryId, 
-          category: categories.find((c: any) => c.id === editCategoryId) || null,
+          category: data.data.category || null,
           primaryPos: editPrimaryPos 
         } : null);
       }
@@ -120,8 +161,11 @@ export const PlayerListAdminPage = () => {
     <div className="max-w-7xl mx-auto space-y-6 p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Players Directory & Scouting</h1>
-          <p className="text-muted-foreground">Total Registered Players: {allPlayers?.length || 0}</p>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+            <span>Players Directory & Scouting</span>
+            <Sparkles className="w-6 h-6 text-emerald-400" />
+          </h1>
+          <p className="text-slate-400 text-sm">Super Admin Scouting Panel & Category Tier Assignment.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -131,15 +175,15 @@ export const PlayerListAdminPage = () => {
               placeholder="Search by name, ID, or position..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-slate-900 border-slate-800 text-white"
             />
           </div>
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-md border">
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
             <Button 
               variant={viewMode === 'grid' ? 'primary' : 'ghost'} 
               size="sm"
               onClick={() => setViewMode('grid')}
-              className="px-3"
+              className="px-3 rounded-lg text-xs font-bold"
             >
               <LayoutGrid className="h-4 w-4 mr-2" /> Grid
             </Button>
@@ -147,7 +191,7 @@ export const PlayerListAdminPage = () => {
               variant={viewMode === 'table' ? 'primary' : 'ghost'} 
               size="sm"
               onClick={() => setViewMode('table')}
-              className="px-3"
+              className="px-3 rounded-lg text-xs font-bold"
             >
               <List className="h-4 w-4 mr-2" /> Table
             </Button>
@@ -156,8 +200,8 @@ export const PlayerListAdminPage = () => {
       </div>
 
       {filteredPlayers.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <Card className="bg-slate-900/90 border-slate-800">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Search className="h-12 w-12 mb-4 opacity-20" />
             <p>No players found matching "{searchQuery}"</p>
           </CardContent>
@@ -169,30 +213,30 @@ export const PlayerListAdminPage = () => {
             return (
               <Card 
                 key={player.id || player.userId} 
-                className={`cursor-pointer hover:scale-[1.02] transition-all duration-300 group overflow-hidden bg-gradient-to-br ${theme.bgGradient} ${theme.border} ${theme.glow} shadow-md`}
-                onClick={() => setSelectedPlayer(player)}
+                className={`transition-all duration-500 group overflow-hidden bg-gradient-to-br ${theme.bgGradient} ${theme.border} ${theme.glow} shadow-lg relative`}
               >
-                <div className="h-24 relative border-b border-white/10">
+                <div className="h-24 relative border-b border-white/10" onClick={() => setSelectedPlayer(player)}>
                   <PlayerPitchPosition position={player.primaryPos} compact className="absolute top-2 left-2 shadow-sm border-white/40" />
                   
                   {/* Category Badge */}
-                  {player.category ? (
-                    <div className="absolute top-2 right-2">
+                  <div className="absolute top-2 right-2">
+                    {player.category ? (
                       <Badge variant="outline" className={`${theme.badge} font-bold text-xs shadow-sm`}>
                         {player.category.name} (${player.category.basePrice})
                       </Badge>
-                    </div>
-                  ) : (
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="destructive" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
-                        Pending Category
+                    ) : (
+                      <Badge variant="outline" className="bg-slate-800/90 text-slate-300 border-slate-700 font-bold text-[10px]">
+                        Unassigned Tier
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <CardContent className="pt-0 relative px-4 pb-4">
-                  <div className={`absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border-4 border-slate-950 bg-slate-950 shadow-xl ${theme.glow}`}>
+                  <div 
+                    className={`absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border-4 border-slate-950 bg-slate-950 shadow-xl cursor-pointer ${theme.glow}`}
+                    onClick={() => setSelectedPlayer(player)}
+                  >
                     <Avatar 
                       src={player.imageUrl || player.publicId} 
                       alt={player.user.name} 
@@ -202,11 +246,11 @@ export const PlayerListAdminPage = () => {
                     />
                   </div>
                   <div className="mt-12 text-center space-y-2">
-                    <div>
-                      <h3 className={`font-bold text-lg leading-tight transition-colors ${theme.accentText}`}>
+                    <div onClick={() => setSelectedPlayer(player)} className="cursor-pointer">
+                      <h3 className={`font-black text-lg leading-tight transition-colors ${theme.accentText}`}>
                         {player.user.name}
                       </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">{player.jerseyName || 'No Jersey'} • {player.studentId}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{player.jerseyName || 'No Jersey'} • ID: {player.studentId}</p>
                     </div>
                     
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
@@ -217,6 +261,32 @@ export const PlayerListAdminPage = () => {
                         </Badge>
                       )}
                     </div>
+
+                    {/* Quick Super Admin Category Tier Selector */}
+                    <div className="pt-3 mt-2 border-t border-slate-800/80 text-left">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Category Tier Selector:
+                      </label>
+                      <select 
+                        value={player.categoryId || player.category?.id || ''}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          quickAssignCategoryMutation.mutate({
+                            profileId: player.id || player.userId,
+                            categoryId: e.target.value
+                          });
+                        }}
+                        className="w-full h-9 px-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
+                        {categories.map((cat: any) => (
+                          <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
+                            {cat.name} Tier (${cat.basePrice})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                   </div>
                 </CardContent>
               </Card>
@@ -224,7 +294,7 @@ export const PlayerListAdminPage = () => {
           })}
         </div>
       ) : (
-        <Card className="bg-slate-900/90 border-slate-800">
+        <Card className="bg-slate-900/90 border-slate-800 shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
@@ -233,7 +303,7 @@ export const PlayerListAdminPage = () => {
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Student ID</th>
                   <th className="px-4 py-3">Position</th>
-                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Category Tier Selector</th>
                   <th className="px-4 py-3">Base Price</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
@@ -244,10 +314,9 @@ export const PlayerListAdminPage = () => {
                   return (
                     <tr 
                       key={player.id || player.userId} 
-                      className="hover:bg-slate-800/40 transition-colors cursor-pointer"
-                      onClick={() => setSelectedPlayer(player)}
+                      className="hover:bg-slate-800/40 transition-colors"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedPlayer(player)}>
                         <div className="flex items-center gap-3">
                           <Avatar 
                             src={player.imageUrl || player.publicId} 
@@ -264,17 +333,27 @@ export const PlayerListAdminPage = () => {
                       <td className="px-4 py-3 text-slate-400">{player.studentId || '-'}</td>
                       <td className="px-4 py-3 font-medium text-emerald-400">{player.primaryPos}</td>
                       <td className="px-4 py-3">
-                        {player.category ? (
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${theme.badge}`}>
-                            {player.category.name}
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-full text-xs font-semibold border border-amber-500/20">
-                            Pending Assignment
-                          </span>
-                        )}
+                        <select 
+                          value={player.categoryId || player.category?.id || ''}
+                          onChange={(e) => {
+                            quickAssignCategoryMutation.mutate({
+                              profileId: player.id || player.userId,
+                              categoryId: e.target.value
+                            });
+                          }}
+                          className="h-8 px-2 rounded-lg border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
+                          {categories.map((cat: any) => (
+                            <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
+                              {cat.name} (${cat.basePrice})
+                            </option>
+                          ))}
+                        </select>
                       </td>
-                      <td className="px-4 py-3 font-mono text-white">${player.category?.basePrice || '-'}</td>
+                      <td className="px-4 py-3 font-mono text-white font-bold">
+                        ${player.category?.basePrice || 0}
+                      </td>
                       <td className="px-4 py-3">
                         {player.isSold ? (
                           <span className="px-2 py-1 bg-emerald-950 text-emerald-300 rounded-md text-xs font-bold border border-emerald-800">
@@ -297,7 +376,7 @@ export const PlayerListAdminPage = () => {
 
       {/* Admin Scouting & Category Assignment Modal */}
       <Dialog open={!!selectedPlayer} onOpenChange={(open) => !open && setSelectedPlayer(null)}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-900 border-slate-800 text-white">
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-900 border-slate-800 text-white shadow-2xl">
           {selectedPlayer && (
             <div className="flex flex-col">
               
@@ -317,8 +396,8 @@ export const PlayerListAdminPage = () => {
                       {selectedPlayer.category.name} Tier (${selectedPlayer.category.basePrice})
                     </Badge>
                   ) : (
-                    <Badge variant="destructive" className="bg-amber-500/20 text-amber-300 border-amber-500/40 px-3 py-1 font-bold">
-                      Needs Category Assignment
+                    <Badge variant="outline" className="bg-slate-800/90 text-slate-300 border-slate-700 px-3 py-1 font-bold">
+                      Unassigned Tier
                     </Badge>
                   )}
                 </div>
@@ -339,7 +418,7 @@ export const PlayerListAdminPage = () => {
                 <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
                   <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm border-b border-slate-800 pb-2">
                     <Sliders className="w-4 h-4" />
-                    <span>Admin Scouting & Category Assignment Controls</span>
+                    <span>Admin Scouting & Category Tier Assignment Controls</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -354,9 +433,9 @@ export const PlayerListAdminPage = () => {
                         onChange={(e) => setEditCategoryId(e.target.value)}
                         className="w-full h-11 px-3 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                       >
-                        <option value="" className="bg-slate-900 text-amber-400">-- Unassigned (Pending Trial) --</option>
+                        <option value="" className="bg-slate-900 text-amber-400">-- Unassigned Tier (Pending Trial) --</option>
                         {categories.map((cat: any) => (
-                          <option key={cat.id} value={cat.id} className="bg-slate-900 text-white">
+                          <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
                             {cat.name} Tier (Base Price: ${cat.basePrice})
                           </option>
                         ))}
@@ -386,7 +465,7 @@ export const PlayerListAdminPage = () => {
                   {!editCategoryId && (
                     <div className="p-3 bg-amber-950/40 border border-amber-800/40 rounded-xl text-amber-300 text-xs font-medium flex items-center space-x-2">
                       <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>This player cannot be pulled onto the Auction Podium until a Category is assigned.</span>
+                      <span>This player cannot be pulled onto the Auction Podium until a Category Tier is assigned.</span>
                     </div>
                   )}
 

@@ -55,4 +55,11 @@ router.put(
   PlayerController.adminUpdate
 );
 
+router.put(
+  '/:id/category',
+  authenticate,
+  authorize('SUPER_ADMIN', 'PODIUM_ADMIN'),
+  PlayerController.adminUpdate
+);
+
 export default router;
