@@ -77,21 +77,33 @@ export const RegistrationPage = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Only render if we have the configuration data from the REGISTRATION phase
-  if (!configData?.data?.categories) {
-    return (
-      <div className="container mx-auto py-20 flex justify-center">
-        <Card className="max-w-md w-full text-center">
-          <CardHeader>
-             <CardTitle>Portal Closed</CardTitle>
-          </CardHeader>
-          <CardContent>
-             <p className="text-muted-foreground">Registration is not currently open.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const sessions = configData?.data?.sessions?.length ? configData.data.sessions : [
+    { id: 's1', name: '2020-2021' },
+    { id: 's2', name: '2021-2022' },
+    { id: 's3', name: '2022-2023' },
+    { id: 's4', name: '2023-2024' },
+    { id: 's5', name: '2024-2025' },
+    { id: 's6', name: '2025-2026' },
+  ];
+
+  const positions = configData?.data?.positions?.length ? configData.data.positions : [
+    { id: 'p1', code: 'GK', name: 'Goalkeeper' },
+    { id: 'p2', code: 'CB', name: 'Center Back' },
+    { id: 'p3', code: 'LB', name: 'Left Back' },
+    { id: 'p4', code: 'RB', name: 'Right Back' },
+    { id: 'p5', code: 'CM', name: 'Central Midfielder' },
+    { id: 'p6', code: 'CAM', name: 'Attacking Midfielder' },
+    { id: 'p7', code: 'LW', name: 'Left Wing' },
+    { id: 'p8', code: 'RW', name: 'Right Wing' },
+    { id: 'p9', code: 'ST', name: 'Striker' },
+  ];
+
+  const categories = configData?.data?.categories?.length ? configData.data.categories : [
+    { id: 'c1', name: 'Platinum', basePrice: 1000 },
+    { id: 'c2', name: 'Gold', basePrice: 750 },
+    { id: 'c3', name: 'Silver', basePrice: 500 },
+    { id: 'c4', name: 'Bronze', basePrice: 250 },
+  ];
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-2xl animate-in fade-in zoom-in-95">
@@ -127,7 +139,7 @@ export const RegistrationPage = () => {
                 <label className="text-sm font-medium">Academic Session</label>
                 <select name="session" required value={formData.session} onChange={handleInputChange} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <option value="">Select Session</option>
-                  {configData.data.sessions?.map((s: any) => (
+                  {sessions.map((s: any) => (
                     <option key={s.id} value={s.name}>{s.name}</option>
                   ))}
                 </select>
@@ -136,7 +148,7 @@ export const RegistrationPage = () => {
                 <label className="text-sm font-medium">Primary Position</label>
                 <select name="primaryPos" required value={formData.primaryPos} onChange={handleInputChange} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <option value="">Select Position</option>
-                  {configData.data.positions?.map((p: any) => (
+                  {positions.map((p: any) => (
                     <option key={p.id} value={p.code}>{p.name} ({p.code})</option>
                   ))}
                 </select>
@@ -144,7 +156,7 @@ export const RegistrationPage = () => {
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium">Secondary Positions (Optional)</label>
                 <div className="flex flex-wrap gap-3">
-                  {configData.data.positions?.filter((p: any) => p.code !== formData.primaryPos).map((p: any) => (
+                  {positions.filter((p: any) => p.code !== formData.primaryPos).map((p: any) => (
                     <label key={p.id} className="flex items-center space-x-2 text-sm border p-2 rounded-md cursor-pointer hover:bg-muted">
                       <input 
                         type="checkbox" 
@@ -169,7 +181,7 @@ export const RegistrationPage = () => {
                 <label className="text-sm font-medium">Player Tier (Base Price)</label>
                 <select name="categoryId" required value={formData.categoryId} onChange={handleInputChange} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <option value="">Select Tier</option>
-                  {configData.data.categories?.map((c: any) => (
+                  {categories.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name} (Base: {c.basePrice})</option>
                   ))}
                 </select>
