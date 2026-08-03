@@ -28,6 +28,7 @@ const PlayerDashboard = lazy(() => import('./features/player/PlayerDashboard').t
 const PlayerMyTeamPage = lazy(() => import('./features/player/PlayerMyTeamPage').then(m => ({ default: m.PlayerMyTeamPage })));
 const PlayerTeamsDirectoryPage = lazy(() => import('./features/player/PlayerTeamsDirectoryPage').then(m => ({ default: m.PlayerTeamsDirectoryPage })));
 const PlayerSchedulesPage = lazy(() => import('./features/player/PlayerSchedulesPage').then(m => ({ default: m.PlayerSchedulesPage })));
+const SpectatorViewPage = lazy(() => import('./features/spectator/SpectatorViewPage').then(m => ({ default: m.SpectatorViewPage })));
 
 const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
@@ -89,6 +90,8 @@ function App() {
                 <Route path="/dashboard/my-team" element={<PlayerMyTeamPage />} />
                 <Route path="/dashboard/teams" element={<PlayerTeamsDirectoryPage />} />
                 <Route path="/dashboard/schedules" element={<PlayerSchedulesPage />} />
+                <Route path="/spectator" element={<SpectatorViewPage />} />
+                <Route path="/podium" element={<SpectatorViewPage />} />
               
               <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
                 <Route path="/admin" element={<AdminDashboard />} />

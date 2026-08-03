@@ -146,18 +146,16 @@ export const Sidebar = () => {
           </>
         )}
 
-        {(user?.role === 'SUPER_ADMIN' || user?.role === 'PODIUM_ADMIN') && (
-          <Link 
-            to="/tournament/admin"
-            onClick={() => setIsMobileOpen(false)} 
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-              location.pathname.startsWith('/tournament/admin') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-            )}
-          >
-            <Trophy className="w-4 h-4 text-amber-400" /> Match Engine
-          </Link>
-        )}
+        <Link 
+          to="/spectator" 
+          onClick={() => setIsMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+            location.pathname === '/spectator' || location.pathname === '/podium' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+          )}
+        >
+          <Trophy className="w-4 h-4 text-amber-400" /> Spectator View
+        </Link>
       </nav>
 
       <div className="p-4 border-t shrink-0">
