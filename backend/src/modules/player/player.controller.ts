@@ -123,4 +123,14 @@ export class PlayerController {
       return sendErrorResponse({ res, statusCode: 500, message: error.message });
     }
   }
+
+  static async adminUpdate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const profile = await PlayerService.adminUpdateProfile(id as string, req.body);
+      return sendSuccessResponse({ res, data: profile, message: 'Player profile updated by Admin' });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
 }

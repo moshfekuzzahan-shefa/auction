@@ -277,27 +277,7 @@ export const RegistrationPage = () => {
             </div>
           </div>
 
-          {/* Player Tier (Base Price) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              Player Tier (Base Price)
-            </label>
-            <div className="relative">
-              <Shield className="w-4 h-4 text-emerald-400 absolute left-3.5 top-3.5 pointer-events-none" />
-              <select 
-                name="categoryId" 
-                required 
-                value={formData.categoryId} 
-                onChange={handleInputChange} 
-                className="w-full pl-10 pr-4 h-11 rounded-xl border border-slate-800 bg-slate-950/70 text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-              >
-                <option value="" className="bg-slate-900 text-slate-400">Select Category / Base Price</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id} className="bg-slate-900 text-white">{c.name} (Base: ${c.basePrice})</option>
-                ))}
-              </select>
-            </div>
-          </div>
+
 
         </div>
 

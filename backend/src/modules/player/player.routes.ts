@@ -48,4 +48,11 @@ router.delete(
   PlayerController.withdraw
 );
 
+router.put(
+  '/admin/:id',
+  authenticate,
+  authorize('SUPER_ADMIN', 'PODIUM_ADMIN'),
+  PlayerController.adminUpdate
+);
+
 export default router;

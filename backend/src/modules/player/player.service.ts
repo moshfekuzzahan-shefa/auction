@@ -125,6 +125,36 @@ export class PlayerService {
     });
   }
 
+  static async adminUpdateProfile(profileId: string, data: any) {
+    const profile = await prisma.profile.findUnique({ where: { id: profileId } });
+    if (!profile) throw new Error('Player profile not found.');
+
+    let basePrice = data.basePrice;
+    if (data.categoryId) {
+      const category = await prisma.playerCategory.findUnique({ where: { id: data.categoryId } });
+      if (category) {
+        basePrice = category.basePrice;
+      }
+    }
+
+    return prisma.profile.update({
+      where: { id: profileId },
+      data: {
+        ...(data.categoryId !== undefined ? { categoryId: data.categoryId || null } : {}),
+        ...(basePrice !== undefined ? { basePrice } : {}),
+        ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
+        ...(data.secondaryPos !== undefined ? { secondaryPos: Array.isArray(data.secondaryPos) ? data.secondaryPos : data.secondaryPos.split(',') } : {}),
+        ...(data.studentId ? { studentId: data.studentId } : {}),
+        ...(data.session ? { session: data.session } : {}),
+        ...(data.jerseyName ? { jerseyName: data.jerseyName } : {}),
+      },
+      include: {
+        user: { select: { name: true, email: true } },
+        category: true
+      }
+    });
+  }
+
   static async getAllPlayers() {
     return prisma.profile.findMany({
       include: {
