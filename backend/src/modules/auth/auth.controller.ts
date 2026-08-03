@@ -1,0 +1,70 @@
+import { Request, Response, NextFunction } from 'express';
+import { AuthService } from './auth.service';
+import { sendSuccessResponse, sendErrorResponse } from '../../utils/apiResponse';
+import { AuthRequest } from '../../middleware/auth.middleware';
+import { AuditService } from '../../services/audit.service';
+
+export class AuthController {
+  static async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'Please provide email and password' });
+      }
+
+      const { user, accessToken, refreshToken } = await AuthService.login(email, password);
+
+      // Set cookies
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000 // 15 mins
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      await AuditService.log({
+        userId: user.id,
+        action: 'USER_LOGIN',
+        resource: 'Authentication',
+        ipAddress: req.ip
+      });
+
+      return sendSuccessResponse({
+        res,
+        message: 'Login successful',
+        data: { user, accessToken }
+      });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 401, message: error.message });
+    }
+  }
+
+  static async logout(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (req.user) {
+        await AuthService.logout(req.user.id);
+        
+        await AuditService.log({
+          userId: req.user.id,
+          action: 'USER_LOGOUT',
+          resource: 'Authentication',
+          ipAddress: req.ip
+        });
+      }
+      
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken');
+
+      return sendSuccessResponse({ res, message: 'Logout successful' });
+    } catch (error: any) {
+      next(error);
+    }
+  }
+}

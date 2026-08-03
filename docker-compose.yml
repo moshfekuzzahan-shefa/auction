@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fp_postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: football_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d football_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fp_network
+
+  db_test:
+    image: postgres:15-alpine
+    container_name: fp_postgres_test
+    environment:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+      POSTGRES_DB: football_db_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d football_db_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fp_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: fp_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+      - db_test
+    networks:
+      - fp_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: fp_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fp_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fp_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://root:rootpassword@db:5432/football_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=supersecretjwtkey_replace_in_prod
+      - JWT_REFRESH_SECRET=supersecretrefreshkey_replace_in_prod
+      - CLIENT_URL=http://localhost:5173
+      # Add Cloudinary credentials here manually when running
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - fp_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: fp_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - fp_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  fp_network:
+    driver: bridge

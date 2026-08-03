@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for Super Admin, Podium Admin, Team Manager, Player
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role     @default(PLAYER)
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Profile data
+  profile   Profile?
+  team      Team?      @relation("TeamManager")
+  auditLogs AuditLog[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  PODIUM_ADMIN
+  TEAM_MANAGER
+  PLAYER
+}
+
+model Profile {
+  id           String          @id @default(uuid())
+  userId       String          @unique
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId    String?
+  session      String?
+  jerseyName   String?
+  primaryPos   String?
+  secondaryPos String[]
+  categoryId   String?
+  category     PlayerCategory? @relation(fields: [categoryId], references: [id])
+  imageUrl     String? // Cloudinary URL
+  publicId     String? // Cloudinary Public ID for reliable deletions
+
+  // Bidding details
+  basePrice Int?
+  isSold    Boolean @default(false)
+  soldPrice Int?
+  teamId    String?
+  team      Team?   @relation(fields: [teamId], references: [id])
+
+  playerEvents MatchEvent[] @relation("PlayerEvent")
+  assistEvents MatchEvent[] @relation("AssistEvent")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  resource  String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model PlayerCategory {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  basePrice Int
+  profiles  Profile[]
+}
+
+model PlayerPosition {
+  id   String @id @default(uuid())
+  code String @unique
+  name String
+}
+
+model AcademicSession {
+  id   String @id @default(uuid())
+  name String @unique
+}
+
+model BidRaiseRule {
+  id               String @id @default(uuid())
+  minBudgetPercent Float // e.g. 0.0
+  maxBudgetPercent Float // e.g. 0.03
+  raisePercent     Float // e.g. 0.0015 (0.15% of total budget)
+}
+
+model Team {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  logoUrl   String?
+  budget    Int     @default(0)
+  managerId String? @unique
+  manager   User?   @relation("TeamManager", fields: [managerId], references: [id])
+
+  players       Profile[]
+  ledgers       AuctionLedger[]
+  notifications Notification[]
+  homeMatches   Match[]         @relation("HomeTeam")
+  awayMatches   Match[]         @relation("AwayTeam")
+  standing      Standing?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuctionLedger {
+  id        String       @id @default(uuid())
+  playerId  String
+  teamId    String
+  team      Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  amount    Int
+  isBlind   Boolean      @default(false)
+  status    LedgerStatus @default(SOLD)
+  timestamp DateTime     @default(now())
+}
+
+enum LedgerStatus {
+  SOLD
+  CANCELLED
+  ROLLBACK
+}
+
+// System State for the Event Lifecycle (4 Phases)
+model SystemState {
+  id           String   @id @default(uuid())
+  currentPhase Phase    @default(SETUP)
+  totalBudget  Int      @default(10000)
+  minRoster    Int      @default(11)
+  maxRoster    Int      @default(15)
+  // Phase Scheduling
+  registrationStart DateTime?
+  registrationEnd   DateTime?
+  auctionStart      DateTime?
+  auctionEnd        DateTime?
+
+  updatedAt    DateTime @updatedAt
+}
+
+enum Phase {
+  SETUP
+  REGISTRATION
+  AUCTION
+  TOURNAMENT
+}
+
+// --- TOURNAMENT MODELS ---
+
+model Match {
+  id         String @id @default(uuid())
+  homeTeamId String
+  homeTeam   Team   @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId String
+  awayTeam   Team   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  homeScore Int @default(0)
+  awayScore Int @default(0)
+
+  status MatchStatus @default(UPCOMING)
+  type   MatchType   @default(SINGLE)
+  round  String // e.g. "Group Stage", "Semi Final"
+  
+  scheduledTime DateTime?
+  venue         String?
+  
+  fixtureGroupId String?
+  legNumber      Int?
+
+  events    MatchEvent[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+enum MatchStatus {
+  UPCOMING
+  LIVE
+  FINISHED
+}
+
+enum MatchType {
+  SINGLE
+  LEGGED
+}
+
+model MatchEvent {
+  id      String @id @default(uuid())
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  playerId String
+  player   Profile @relation("PlayerEvent", fields: [playerId], references: [id])
+
+  assistId String?
+  assist   Profile? @relation("AssistEvent", fields: [assistId], references: [id])
+
+  type      EventType
+  minute    Int
+  createdAt DateTime  @default(now())
+}
+
+enum EventType {
+  GOAL
+  YELLOW_CARD
+  RED_CARD
+  OWN_GOAL
+  CLEAN_SHEET
+}
+
+model Standing {
+  id     String @id @default(uuid())
+  teamId String @unique
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  played Int @default(0)
+  won    Int @default(0)
+  drawn  Int @default(0)
+  lost   Int @default(0)
+
+  goalsFor       Int @default(0)
+  goalsAgainst   Int @default(0)
+  goalDifference Int @default(0)
+  points         Int @default(0)
+}
+
+// --- PUBLIC PORTAL MODELS ---
+
+model News {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
