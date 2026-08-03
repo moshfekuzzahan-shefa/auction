@@ -55,7 +55,7 @@ export const AdminDashboard = () => {
     },
     onSuccess: (_, variables) => {
       toast.success('System Phase updated successfully');
-      dispatch(setPhase(variables));
+      dispatch(setPhase(variables as any));
       queryClient.invalidateQueries({ queryKey: ['system'] });
       queryClient.invalidateQueries({ queryKey: ['public'] });
     },

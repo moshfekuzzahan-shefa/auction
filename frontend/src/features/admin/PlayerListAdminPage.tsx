@@ -68,7 +68,7 @@ export const PlayerListAdminPage = () => {
           </div>
           <div className="flex items-center gap-1 bg-muted p-1 rounded-md border">
             <Button 
-              variant={viewMode === 'grid' ? 'default' : 'ghost'} 
+              variant={viewMode === 'grid' ? 'primary' : 'ghost'} 
               size="sm"
               onClick={() => setViewMode('grid')}
               className="px-3"
@@ -76,7 +76,7 @@ export const PlayerListAdminPage = () => {
               <LayoutGrid className="h-4 w-4 mr-2" /> Grid
             </Button>
             <Button 
-              variant={viewMode === 'table' ? 'default' : 'ghost'} 
+              variant={viewMode === 'table' ? 'primary' : 'ghost'} 
               size="sm"
               onClick={() => setViewMode('table')}
               className="px-3"

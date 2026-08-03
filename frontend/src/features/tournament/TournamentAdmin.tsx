@@ -78,7 +78,6 @@ export const TournamentAdmin = () => {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold">Tournament Match Engine</h1>
-      </div>
 
       <Card>
         <CardHeader>
