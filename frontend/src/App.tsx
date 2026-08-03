@@ -17,6 +17,7 @@ const LandingPage = lazy(() => import('./features/landing/LandingPage').then(m =
 const LoginPage = lazy(() => import('./features/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegistrationPage = lazy(() => import('./features/registration/RegistrationPage').then(m => ({ default: m.RegistrationPage })));
 const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminTeamRequestsPage = lazy(() => import('./features/admin/AdminTeamRequestsPage').then(m => ({ default: m.AdminTeamRequestsPage })));
 const PlayerListAdminPage = lazy(() => import('./features/admin/PlayerListAdminPage').then(m => ({ default: m.PlayerListAdminPage })));
 const TeamDashboard = lazy(() => import('./features/team/TeamDashboard').then(m => ({ default: m.TeamDashboard })));
 const LiveAuction = lazy(() => import('./features/auction/LiveAuction').then(m => ({ default: m.LiveAuction })));
@@ -92,6 +93,7 @@ function App() {
               <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/players" element={<PlayerListAdminPage />} />
+                <Route path="/admin/team-requests" element={<AdminTeamRequestsPage />} />
               </Route>
 
               <Route element={<RoleProtectedRoute allowedRoles={['TEAM_MANAGER']} />}>

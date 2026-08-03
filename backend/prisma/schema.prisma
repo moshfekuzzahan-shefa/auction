@@ -97,13 +97,24 @@ model BidRaiseRule {
   raisePercent     Float // e.g. 0.0015 (0.15% of total budget)
 }
 
+enum TeamStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  REJECTED
+}
+
 model Team {
-  id        String  @id @default(uuid())
-  name      String  @unique
-  logoUrl   String?
-  budget    Int     @default(0)
-  managerId String? @unique
-  manager   User?   @relation("TeamManager", fields: [managerId], references: [id])
+  id            String     @id @default(uuid())
+  name          String     @unique
+  code          String?
+  logoUrl       String?
+  brandColor    String?
+  status        TeamStatus @default(ACTIVE)
+  budget        Int        @default(0)
+  managerId     String?    @unique
+  manager       User?      @relation("TeamManager", fields: [managerId], references: [id])
+  requestedById String?
+  contactBio    String?
 
   players       Profile[]
   ledgers       AuctionLedger[]

@@ -52,4 +52,35 @@ export class TeamsController {
       return sendErrorResponse({ res, statusCode: 500, message: error.message });
     }
   }
+
+  static async requestTeam(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) return sendErrorResponse({ res, statusCode: 401, message: 'Unauthorized' });
+      const fileBuffer = req.file?.buffer;
+      const team = await TeamsService.requestTeam(req.user.id, req.body, fileBuffer);
+      return sendSuccessResponse({ res, statusCode: 201, message: 'Team creation request submitted! Awaiting admin verification.', data: team });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
+  static async getPendingRequests(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const requests = await TeamsService.getPendingRequests();
+      return sendSuccessResponse({ res, data: requests });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+    }
+  }
+
+  static async verifyTeamRequest(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { action } = req.body;
+      const result = await TeamsService.verifyTeamRequest(id, action);
+      return sendSuccessResponse({ res, message: `Team request ${action.toLowerCase()}d successfully`, data: result });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
 }

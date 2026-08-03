@@ -129,4 +129,105 @@ export class TeamsService {
       return team;
     });
   }
+
+  static async requestTeam(userId: string, data: any, fileBuffer?: Buffer) {
+    const existingTeam = await prisma.team.findUnique({ where: { name: data.name } });
+    if (existingTeam) throw new Error(`Team name "${data.name}" is already registered.`);
+
+    const system = await prisma.systemState.findFirst();
+    const initialBudget = system?.totalBudget || 10000;
+
+    let logoUrl = data.logoUrl || null;
+
+    if (fileBuffer) {
+      const { CloudinaryService } = require('../../services/cloudinary.service');
+      const uploadResult = await CloudinaryService.uploadImage(fileBuffer, 'football_platform/teams');
+      logoUrl = uploadResult.url;
+    }
+
+    return prisma.team.create({
+      data: {
+        name: data.name,
+        code: data.code || data.name.substring(0, 3).toUpperCase(),
+        logoUrl: logoUrl,
+        brandColor: data.brandColor || '#10B981',
+        status: 'PENDING_VERIFICATION',
+        budget: initialBudget,
+        requestedById: userId,
+        contactBio: data.contactBio || null,
+      }
+    });
+  }
+
+  static async getPendingRequests() {
+    const pendingTeams = await prisma.team.findMany({
+      where: { status: 'PENDING_VERIFICATION' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const userIds = pendingTeams.map(t => t.requestedById).filter(Boolean) as string[];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true, role: true }
+    });
+
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    return pendingTeams.map(team => ({
+      ...team,
+      requester: team.requestedById ? userMap.get(team.requestedById) : null
+    }));
+  }
+
+  static async verifyTeamRequest(teamId: string, action: 'APPROVE' | 'REJECT') {
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw new Error('Team request not found.');
+
+    if (action === 'REJECT') {
+      const updated = await prisma.team.update({
+        where: { id: teamId },
+        data: { status: 'REJECTED' }
+      });
+
+      if (team.requestedById) {
+        await prisma.profile.updateMany({
+          where: { userId: team.requestedById },
+          data: {
+            hasUnreadAdminUpdates: true,
+            lastAdminChange: `Your team request for "${team.name}" was rejected by the admin.`
+          }
+        });
+      }
+      return updated;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updatedTeam = await tx.team.update({
+        where: { id: teamId },
+        data: {
+          status: 'ACTIVE',
+          ...(team.requestedById ? { managerId: team.requestedById } : {})
+        }
+      });
+
+      if (team.requestedById) {
+        await tx.user.update({
+          where: { id: team.requestedById },
+          data: { role: 'TEAM_MANAGER' }
+        });
+
+        await tx.profile.updateMany({
+          where: { userId: team.requestedById },
+          data: {
+            teamId: team.id,
+            isSold: true,
+            hasUnreadAdminUpdates: true,
+            lastAdminChange: `🎉 CONGRATULATIONS! Your team "${team.name}" has been approved! You are now the Franchise Manager & Owner.`
+          }
+        });
+      }
+
+      return updatedTeam;
+    });
+  }
 }
