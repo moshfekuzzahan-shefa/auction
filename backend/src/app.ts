@@ -70,7 +70,7 @@ app.use(hpp());
 
 // Lightweight Standalone Health Check Route (No DB / Redis Lock)
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: Date.now(), uptime: Math.floor(process.uptime()) });
+  res.status(200).json({ status: 'ok', server: 'auctionbyshefa', timestamp: Date.now(), uptime: Math.floor(process.uptime()) });
 });
 
 import RedisStore from 'rate-limit-redis';

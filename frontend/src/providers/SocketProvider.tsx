@@ -23,7 +23,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   useEffect(() => {
     if (isAuthenticated && token && !socketInstance) {
       // Support dedicated persistent socket URL (e.g. Render backend) or fallback to VITE_API_URL
-      const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'https://football-platform-backend.onrender.com';
+      const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'https://auctionbyshefa.onrender.com';
       const cleanUrl = rawUrl.replace(/\/+$/, '').replace(/\/api$/, '');
 
       socketInstance = io(cleanUrl, {

@@ -4,8 +4,8 @@ import { logout, setCredentials } from '../store/authSlice';
 
 const getApiBase = () => {
   const envUrl = import.meta.env.VITE_API_URL;
-  if (!envUrl) return '/api';
-  const cleanUrl = envUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+  const targetUrl = envUrl || 'https://auctionbyshefa.onrender.com';
+  const cleanUrl = targetUrl.replace(/\/+$/, '').replace(/\/api$/, '');
   return `${cleanUrl}/api`;
 };
 
