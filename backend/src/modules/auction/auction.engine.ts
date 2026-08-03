@@ -7,12 +7,6 @@ import { Prisma } from '@prisma/client';
 type AuctionMode = 'NORMAL' | 'BLIND';
 type AuctionStatus = 'IDLE' | 'ACTIVE' | 'PAUSED';
 
-interface Bid {
-  teamId: string;
-  amount: number;
-  timestamp: Date;
-}
-
 export class AuctionEngine {
   private io: Server;
   
@@ -40,13 +34,21 @@ export class AuctionEngine {
 
   // --- Admin Controls ---
 
-  public async startAuction(playerId: string, mode: AuctionMode = 'NORMAL', basePrice: number = 100, timerSeconds: number = 30) {
+  public async startAuction(playerId: string, mode: AuctionMode = 'NORMAL', basePriceOverride?: number, timerSeconds: number = 30) {
     if (this.status !== 'IDLE') throw new Error('Auction already active');
     
+    // Fetch player profile & category basePrice
+    const player = await prisma.profile.findUnique({
+      where: { userId: playerId },
+      include: { category: true }
+    });
+
+    const calculatedBasePrice = basePriceOverride || player?.basePrice || player?.category?.basePrice || 500;
+
     this.status = 'ACTIVE';
     this.mode = mode;
     this.currentPlayerId = playerId;
-    this.currentBid = basePrice;
+    this.currentBid = calculatedBasePrice;
     this.currentLeaderId = null;
     this.timer = timerSeconds;
     this.blindBids.clear();
@@ -109,6 +111,8 @@ export class AuctionEngine {
         metadata: { ledgerId, playerId: ledger.playerId, teamId: ledger.teamId }
       });
     });
+
+    this.broadcastState();
   }
 
   public toggleBidMode(mode: AuctionMode) {
@@ -120,35 +124,35 @@ export class AuctionEngine {
 
   // --- Core Bidding Math & Guardrails ---
 
-  private async validateBidEligibility(tx: Prisma.TransactionClient, teamId: string, proposedBid: number): Promise<{ isValid: boolean, error?: string }> {
-    // We use Prisma raw query for strict row locking inside the transaction
+  private async validateBidEligibility(tx: Prisma.TransactionClient, teamId: string, proposedBid: number): Promise<{ isValid: boolean, error?: string, maxAllowableBid?: number }> {
+    // Lock team row with SELECT ... FOR UPDATE inside transaction to prevent double spending
     const teamRaw = await tx.$queryRaw<any[]>`SELECT * FROM "Team" WHERE id = ${teamId} FOR UPDATE`;
     const team = teamRaw[0];
 
     const system = await tx.systemState.findFirst();
     const categories = await tx.playerCategory.findMany({ orderBy: { basePrice: 'asc' } });
-    
-    // Using Prisma to count players since it's outside the Team row lock
     const currentPlayersCount = await tx.profile.count({ where: { teamId } });
     
-    if (!team || !system || categories.length === 0) return { isValid: false, error: 'System not fully configured' };
+    if (!team || !system) return { isValid: false, error: 'System not fully configured' };
 
-    const minRoster = system.minRoster;
+    const minRoster = system.minRoster || 11;
+    const lowestBasePrice = categories.length > 0 ? categories[0].basePrice : 250;
     
-    if (currentPlayersCount + 1 >= minRoster) {
-       if (team.budget < proposedBid) return { isValid: false, error: 'Insufficient budget' };
-       return { isValid: true };
+    // Remaining required slots after acquiring this player
+    const remainingSlotsNeeded = Math.max(0, minRoster - (currentPlayersCount + 1));
+    const requiredReserve = remainingSlotsNeeded * lowestBasePrice;
+    
+    const maxAllowableBid = team.budget - requiredReserve;
+    
+    if (proposedBid > maxAllowableBid) {
+      return { 
+        isValid: false, 
+        maxAllowableBid,
+        error: `Bid rejected! You must retain $${requiredReserve} reserve budget to fulfill the minimum roster size (${minRoster} players needed, currently have ${currentPlayersCount}). Maximum allowable bid is $${maxAllowableBid}.` 
+      };
     }
 
-    const lowestBasePrice = categories[0].basePrice;
-    const remainingPlayersNeeded = minRoster - (currentPlayersCount + 1);
-    const requiredReserve = remainingPlayersNeeded * lowestBasePrice;
-    
-    const availableToSpend = team.budget - requiredReserve;
-    if (availableToSpend < proposedBid) {
-      return { isValid: false, error: `Reserve constraint breached. Need to keep $${requiredReserve} for ${remainingPlayersNeeded} remaining players.` };
-    }
-    return { isValid: true };
+    return { isValid: true, maxAllowableBid };
   }
 
   // --- Real-Time Bidding ---
@@ -157,28 +161,19 @@ export class AuctionEngine {
     if (this.status !== 'ACTIVE') return;
 
     this.enqueue(async () => {
-      // Dynamic Bid Math
-      const system = await prisma.systemState.findFirst();
-      if (!system) return;
-
       if (this.mode === 'NORMAL') {
-        if (amount <= this.currentBid) {
-          this.io.to(`team_${teamId}`).emit('ERROR', 'Bid must be higher than current bid');
+        const { nextValidBid } = await this.calculateNextBid();
+
+        if (this.currentLeaderId && amount < nextValidBid) {
+          this.io.to(`team_${teamId}`).emit('ERROR', `Bid increment too low. Next valid bid (+10%) must be at least $${nextValidBid}`);
           return;
         }
-        
-        const { nextValidBid, minimumRaise } = await this.calculateNextBid();
 
-        if (amount < nextValidBid) {
-           this.io.to(`team_${teamId}`).emit('ERROR', `Bid increment too low. Next valid bid must be at least $${nextValidBid}`);
-           return;
-        }
-
-        // We wrap the validation in a transaction to enforce the FOR UPDATE lock
+        // Validate eligibility inside transaction with row locking
         await prisma.$transaction(async (tx) => {
           const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
           if (!isValid) {
-            this.io.to(`team_${teamId}`).emit('ERROR', `Bid rejected: ${error}`);
+            this.io.to(`team_${teamId}`).emit('ERROR', error);
             return;
           }
 
@@ -186,7 +181,7 @@ export class AuctionEngine {
           this.currentBid = amount;
           this.currentLeaderId = teamId;
           
-          // Reset timer
+          // Reset timer on new valid bid
           this.timer = 30; // Reset to 30s
           
           this.io.emit('BID_PLACED', { teamId, amount });
@@ -197,7 +192,7 @@ export class AuctionEngine {
         await prisma.$transaction(async (tx) => {
           const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
           if (!isValid) {
-             this.io.to(`team_${teamId}`).emit('ERROR', `Bid rejected: ${error}`);
+             this.io.to(`team_${teamId}`).emit('ERROR', error);
              return;
           }
           this.blindBids.set(teamId, amount);
@@ -228,7 +223,7 @@ export class AuctionEngine {
     }
   }
 
-  private async endAuction() {
+  public async endAuction() {
     this.stopTimer();
     this.status = 'IDLE';
 
@@ -252,14 +247,12 @@ export class AuctionEngine {
       }
 
       if (winnerId && this.currentPlayerId) {
-        // Persist to DB (Transactions)
+        // Persist to DB inside Transaction
         await prisma.$transaction(async (tx) => {
-          // Lock team row
           const teamRaw = await tx.$queryRaw<any[]>`SELECT * FROM "Team" WHERE id = ${winnerId!} FOR UPDATE`;
           const team = teamRaw[0];
 
           if (team) {
-            // Re-verify eligibility before final deduction (crucial for blind bids or delayed queues)
             const { isValid, error } = await this.validateBidEligibility(tx, winnerId!, finalAmount);
             if (!isValid) {
               throw new Error(`Winner ${winnerId} mathematically disqualified at T=0: ${error}`);
@@ -271,13 +264,13 @@ export class AuctionEngine {
             });
           }
           
-          // Update player
+          // Update player as sold to this team
           await tx.profile.update({
             where: { userId: this.currentPlayerId! },
             data: { isSold: true, soldPrice: finalAmount, teamId: winnerId }
           });
 
-          // Write ledger
+          // Write ledger entry
           await tx.auctionLedger.create({
             data: {
               playerId: this.currentPlayerId!,
@@ -292,29 +285,31 @@ export class AuctionEngine {
       } else {
         this.io.emit('PLAYER_UNSOLD', { result: 'UNSOLD', playerId: this.currentPlayerId });
       }
+      this.broadcastState();
     });
   }
 
   public async calculateNextBid(): Promise<{ minimumRaise: number, nextValidBid: number }> {
-    const system = await prisma.systemState.findFirst();
-    if (!system || this.status !== 'ACTIVE') return { minimumRaise: 0, nextValidBid: this.currentBid };
+    if (this.status !== 'ACTIVE') return { minimumRaise: 0, nextValidBid: this.currentBid };
 
-    const budgetPercent = (this.currentBid / system.totalBudget);
-    const rules = await prisma.bidRaiseRule.findMany({ orderBy: { minBudgetPercent: 'desc' } });
-    
-    let requiredRaisePercent = 0.001; // default fallback 0.1%
-    for (const rule of rules) {
-      if (budgetPercent >= rule.minBudgetPercent) {
-        requiredRaisePercent = rule.raisePercent;
-        break;
-      }
+    // If no leader team has placed a bid yet, the initial bid can be the Base Price itself!
+    if (!this.currentLeaderId) {
+      return { minimumRaise: 0, nextValidBid: this.currentBid };
     }
-    const minimumRaise = Math.max(10, Math.floor(system.totalBudget * requiredRaisePercent));
-    return { minimumRaise, nextValidBid: this.currentBid + minimumRaise };
+
+    // Dynamic 10% Increment Engine: Next Bid = Math.ceil(Current Bid * 1.10)
+    const minimumRaise = Math.ceil(this.currentBid * 0.10);
+    const nextValidBid = this.currentBid + minimumRaise;
+
+    return { minimumRaise, nextValidBid };
   }
 
   public async broadcastState(targetSocket?: Socket) {
     const { minimumRaise, nextValidBid } = await this.calculateNextBid();
+
+    const system = await prisma.systemState.findFirst();
+    const categories = await prisma.playerCategory.findMany({ orderBy: { basePrice: 'asc' } });
+    const lowestBasePrice = categories.length > 0 ? categories[0].basePrice : 250;
 
     let currentPlayer = null;
     if (this.currentPlayerId) {
@@ -323,6 +318,19 @@ export class AuctionEngine {
         include: { user: true, category: true }
       });
     }
+
+    // Include teams with current player count for real-time manager roster counter
+    const teams = await prisma.team.findMany({
+      select: {
+        id: true,
+        name: true,
+        budget: true,
+        managerId: true,
+        _count: {
+          select: { players: true }
+        }
+      }
+    });
 
     const payload = {
       status: this.status,
@@ -333,7 +341,10 @@ export class AuctionEngine {
       currentLeaderId: this.currentLeaderId,
       timer: this.timer,
       nextValidBid,
-      minimumRaise
+      minimumRaise,
+      minRoster: system?.minRoster || 11,
+      lowestBasePrice,
+      teams
     };
 
     if (targetSocket) {
