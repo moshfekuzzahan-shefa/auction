@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/authSlice';
-import { LogOut, Home, Users, Trophy, Settings, Menu, X, Shield, Calendar, Clock } from 'lucide-react';
+import { LogOut, Home, Users, Trophy, Settings, Menu, X, Shield, Calendar, Clock, Crown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useState } from 'react';
@@ -106,6 +106,16 @@ export const Sidebar = () => {
               )}
             >
               <Clock className="w-4 h-4 text-amber-400" /> Pending Requests
+            </Link>
+            <Link 
+              to="/admin/podium-requests" 
+              onClick={() => setIsMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                location.pathname.startsWith('/admin/podium-requests') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+              )}
+            >
+              <Crown className="w-4 h-4 text-purple-400" /> Podium Applications
             </Link>
             <Link 
               to="/auction/admin" 

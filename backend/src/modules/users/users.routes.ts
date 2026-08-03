@@ -35,4 +35,11 @@ router.put(
   UsersController.updateRole
 );
 
+// Application for Podium Admin rights
+router.post('/podium-admin-request', authenticate, UsersController.applyPodiumAdmin);
+
+// Super Admin management for pending Podium Admin applications
+router.get('/podium-admin-requests', authenticate, authorize('SUPER_ADMIN'), UsersController.getPendingPodiumAdminApplications);
+router.put('/podium-admin-requests/:id/verify', authenticate, authorize('SUPER_ADMIN'), UsersController.verifyPodiumAdminApplication);
+
 export default router;

@@ -24,6 +24,7 @@ model User {
   profile   Profile?
   team      Team?      @relation("TeamManager")
   auditLogs AuditLog[]
+  podiumAdminRequests PodiumAdminRequest[]
 }
 
 enum Role {
@@ -251,6 +252,24 @@ model Standing {
   goalsAgainst   Int @default(0)
   goalDifference Int @default(0)
   points         Int @default(0)
+}
+
+enum AdminRequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model PodiumAdminRequest {
+  id           String             @id @default(uuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone        String
+  availability String
+  experience   String
+  status       AdminRequestStatus @default(PENDING_APPROVAL)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 }
 
 // --- PUBLIC PORTAL MODELS ---

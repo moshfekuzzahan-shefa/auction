@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('./features/auth/LoginPage').then(m => ({ de
 const RegistrationPage = lazy(() => import('./features/registration/RegistrationPage').then(m => ({ default: m.RegistrationPage })));
 const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminTeamRequestsPage = lazy(() => import('./features/admin/AdminTeamRequestsPage').then(m => ({ default: m.AdminTeamRequestsPage })));
+const AdminPodiumRequestsPage = lazy(() => import('./features/admin/AdminPodiumRequestsPage').then(m => ({ default: m.AdminPodiumRequestsPage })));
 const PlayerListAdminPage = lazy(() => import('./features/admin/PlayerListAdminPage').then(m => ({ default: m.PlayerListAdminPage })));
 const TeamDashboard = lazy(() => import('./features/team/TeamDashboard').then(m => ({ default: m.TeamDashboard })));
 const LiveAuction = lazy(() => import('./features/auction/LiveAuction').then(m => ({ default: m.LiveAuction })));
@@ -84,19 +85,25 @@ function App() {
               </Route>
             </Route>
 
+            {/* Public Spectator Routes (No Login Required) */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/spectator" element={<SpectatorViewPage />} />
+              <Route path="/podium" element={<SpectatorViewPage />} />
+              <Route path="/schedules" element={<PlayerSchedulesPage />} />
+            </Route>
+
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/dashboard" element={<DashboardHome />} />
                 <Route path="/dashboard/my-team" element={<PlayerMyTeamPage />} />
                 <Route path="/dashboard/teams" element={<PlayerTeamsDirectoryPage />} />
                 <Route path="/dashboard/schedules" element={<PlayerSchedulesPage />} />
-                <Route path="/spectator" element={<SpectatorViewPage />} />
-                <Route path="/podium" element={<SpectatorViewPage />} />
               
               <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/players" element={<PlayerListAdminPage />} />
                 <Route path="/admin/team-requests" element={<AdminTeamRequestsPage />} />
+                <Route path="/admin/podium-requests" element={<AdminPodiumRequestsPage />} />
               </Route>
 
               <Route element={<RoleProtectedRoute allowedRoles={['TEAM_MANAGER']} />}>
