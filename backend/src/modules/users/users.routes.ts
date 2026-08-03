@@ -20,4 +20,19 @@ router.post(
   UsersController.createTeamManager
 );
 
+// Role Promotion / Revocation Flow
+router.patch(
+  '/:id/role',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  UsersController.updateRole
+);
+
+router.put(
+  '/:id/role',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  UsersController.updateRole
+);
+
 export default router;

@@ -1,24 +1,29 @@
 import { Card, CardContent } from './Card';
 import { Badge } from './Badge';
 import { Avatar } from './Avatar';
+import { Button } from './Button';
 import { PlayerPitchPosition } from './PlayerPitchPosition';
 import { getCategoryTheme } from '../../utils/categoryTheme';
-import { Trophy, Shield } from 'lucide-react';
+import { Trophy, Shield, Crown } from 'lucide-react';
 
 interface PlayerCardProps {
   player: any;
   categories: any[];
   onSelectPlayer: (player: any) => void;
   onCategoryChange: (profileId: string, categoryId: string) => void;
+  onTogglePodiumAdmin?: (player: any) => void;
 }
 
 export const PlayerCard = ({
   player,
   categories,
   onSelectPlayer,
-  onCategoryChange
+  onCategoryChange,
+  onTogglePodiumAdmin
 }: PlayerCardProps) => {
   const theme = getCategoryTheme(player.category?.name);
+  const isPodiumAdmin = player.user?.role === 'PODIUM_ADMIN';
+
   const secondaryPosList = player.secondaryPos && Array.isArray(player.secondaryPos) 
     ? player.secondaryPos.filter((p: string) => p && p !== player.primaryPos)
     : [];
@@ -31,22 +36,31 @@ export const PlayerCard = ({
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-0" />
 
       <div className="relative z-10">
-        {/* 1. FUT Header Row: Tactical Mini Pitch (Left) & Category Badge (Right) */}
+        {/* 1. FUT Header Row: Tactical Mini Pitch (Left) & Badges (Right) */}
         <div className="flex items-center justify-between p-3.5 border-b border-white/10 bg-slate-950/50 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <PlayerPitchPosition position={player.primaryPos} compact className="shadow-md border-emerald-400/60" />
             <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase hidden sm:inline-block">FUT CARD</span>
           </div>
           
-          {player.category ? (
-            <Badge variant="outline" className={`${theme.badge} font-black text-xs px-2.5 py-1 shadow-md tracking-wide uppercase`}>
-              {player.category.name} (${player.category.basePrice})
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="bg-slate-900/90 text-slate-400 border-slate-700 font-bold text-[10px] px-2 py-0.5">
-              Unassigned Tier
-            </Badge>
-          )}
+          <div className="flex items-center gap-1.5">
+            {isPodiumAdmin && (
+              <Badge className="bg-purple-950/90 text-purple-300 border border-purple-500/60 font-black text-[10px] px-2 py-0.5 shadow-[0_0_12px_rgba(168,85,247,0.4)] animate-pulse flex items-center gap-1">
+                <Crown className="w-3 h-3 text-purple-400" />
+                <span>PODIUM ADMIN</span>
+              </Badge>
+            )}
+
+            {player.category ? (
+              <Badge variant="outline" className={`${theme.badge} font-black text-xs px-2.5 py-1 shadow-md tracking-wide uppercase`}>
+                {player.category.name} (${player.category.basePrice})
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-slate-900/90 text-slate-400 border-slate-700 font-bold text-[10px] px-2 py-0.5">
+                Unassigned Tier
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* 2. Centered Avatar Photo with Tier Metallic Rim Ring */}
@@ -76,7 +90,6 @@ export const PlayerCard = ({
             </p>
           </div>
           
-          {/* Primary Position Badge & Secondary Position Tags */}
           <div className="flex flex-col items-center gap-1.5 pt-1">
             <div className="flex items-center gap-1.5">
               <Badge variant="default" className="text-xs font-black bg-slate-950 text-emerald-400 border border-emerald-500/40 px-3 py-0.5 shadow-inner">
@@ -99,15 +112,15 @@ export const PlayerCard = ({
         </CardContent>
       </div>
 
-      {/* 4. Frosted Glass Admin Category Selector Footer */}
-      <div className="p-3 border-t border-white/10 bg-slate-950/80 backdrop-blur-md relative z-10">
+      {/* 4. Frosted Glass Admin Category & Role Action Footer */}
+      <div className="p-3 border-t border-white/10 bg-slate-950/80 backdrop-blur-md relative z-10 space-y-2">
         <select 
           value={player.categoryId || player.category?.id || ''}
           onChange={(e) => {
             e.stopPropagation();
             onCategoryChange(player.id || player.userId, e.target.value);
           }}
-          className="w-full h-10 px-3 rounded-xl border border-slate-700 bg-slate-900/95 text-white text-xs font-bold focus:outline-none focus:border-emerald-500 shadow-inner transition-colors"
+          className="w-full h-9 px-3 rounded-xl border border-slate-700 bg-slate-900/95 text-white text-xs font-bold focus:outline-none focus:border-emerald-500 shadow-inner transition-colors"
         >
           <option value="" className="bg-slate-900 text-amber-400 font-semibold">-- Unassigned Tier (Trial Pending) --</option>
           {categories.map((cat: any) => (
@@ -116,6 +129,25 @@ export const PlayerCard = ({
             </option>
           ))}
         </select>
+
+        {onTogglePodiumAdmin && player.user?.role !== 'SUPER_ADMIN' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePodiumAdmin(player);
+            }}
+            className={`w-full h-8 text-[11px] font-bold rounded-xl transition-all ${
+              isPodiumAdmin 
+                ? 'bg-red-950/50 hover:bg-red-900 border-red-800 text-red-200' 
+                : 'bg-purple-950/60 hover:bg-purple-900 border-purple-700 text-purple-200'
+            }`}
+          >
+            <Crown className="w-3 h-3 mr-1.5" />
+            {isPodiumAdmin ? 'Revoke Podium Admin' : 'Promote to Podium Admin'}
+          </Button>
+        )}
       </div>
     </Card>
   );

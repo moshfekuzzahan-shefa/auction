@@ -30,4 +30,19 @@ export class UsersController {
       return sendErrorResponse({ res, statusCode: 400, message: error.message });
     }
   }
+
+  static async updateRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.params.id as string;
+      const { role } = req.body;
+      if (!role) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'Role is required' });
+      }
+
+      const updated = await UsersService.updateRole(userId, role);
+      return sendSuccessResponse({ res, message: `User role updated to ${role} successfully`, data: updated });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
 }

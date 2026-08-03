@@ -38,4 +38,31 @@ export class UsersService {
 
     return result;
   }
+
+  static async updateRole(userId: string, targetRole: 'PODIUM_ADMIN' | 'PLAYER' | 'TEAM_MANAGER' | 'SUPER_ADMIN') {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('User not found.');
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { role: targetRole },
+      select: { id: true, name: true, email: true, role: true }
+    });
+
+    const profile = await prisma.profile.findUnique({ where: { userId } });
+    if (profile) {
+      const msg = targetRole === 'PODIUM_ADMIN'
+        ? '👑 YOU ARE NOW A PODIUM ADMIN! Access live player auctions from the Podium Control Panel in your sidebar.'
+        : `Your account role was updated to ${targetRole}.`;
+      await prisma.profile.update({
+        where: { userId },
+        data: {
+          hasUnreadAdminUpdates: true,
+          lastAdminChange: msg
+        }
+      });
+    }
+
+    return updatedUser;
+  }
 }

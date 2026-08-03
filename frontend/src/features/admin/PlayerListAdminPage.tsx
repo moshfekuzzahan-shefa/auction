@@ -8,7 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { PlayerCard } from '../../components/ui/PlayerCard';
-import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders, Sparkles } from 'lucide-react';
+import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders, Sparkles, Crown } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
 import api from '../../services/api';
 
@@ -114,6 +114,33 @@ export const PlayerListAdminPage = () => {
       toast.error(err.response?.data?.message || 'Failed to update category tier');
     }
   });
+
+  const togglePodiumAdminMutation = useMutation({
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
+      const res = await api.patch(`/admin/users/${userId}/role`, { role: newRole });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'User role updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['players', 'all'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to update user role.');
+    }
+  });
+
+  const handleTogglePodiumAdmin = (player: any) => {
+    const isPodiumAdmin = player.user?.role === 'PODIUM_ADMIN';
+    const newRole = isPodiumAdmin ? 'PLAYER' : 'PODIUM_ADMIN';
+    const actionText = isPodiumAdmin ? 'Revoke Podium Admin rights from' : 'Grant Podium Admin rights to';
+
+    if (confirm(`Are you sure you want to ${actionText} ${player.user?.name}?`)) {
+      togglePodiumAdminMutation.mutate({
+        userId: player.userId || player.user?.id,
+        newRole
+      });
+    }
+  };
 
   const updatePlayerMutation = useMutation({
     mutationFn: async () => {
@@ -227,6 +254,7 @@ export const PlayerListAdminPage = () => {
               onCategoryChange={(profileId, categoryId) => {
                 quickAssignCategoryMutation.mutate({ profileId, categoryId });
               }}
+              onTogglePodiumAdmin={handleTogglePodiumAdmin}
             />
           ))}
         </div>
@@ -406,7 +434,23 @@ export const PlayerListAdminPage = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-end pt-1">
+                  <div className="flex justify-between items-center pt-1 border-t border-slate-800">
+                    {selectedPlayer.user?.role !== 'SUPER_ADMIN' ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          handleTogglePodiumAdmin(selectedPlayer);
+                          setSelectedPlayer(null);
+                        }}
+                        className={selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'bg-red-950/50 hover:bg-red-900 border-red-800 text-red-200 text-xs font-bold rounded-xl' : 'bg-purple-950/60 hover:bg-purple-900 border-purple-700 text-purple-200 text-xs font-bold rounded-xl'}
+                      >
+                        <Crown className="w-3.5 h-3.5 mr-1.5" />
+                        {selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'Revoke Podium Admin' : 'Promote to Podium Admin'}
+                      </Button>
+                    ) : <div />}
+
                     <Button 
                       onClick={() => updatePlayerMutation.mutate()}
                       disabled={updatePlayerMutation.isPending}

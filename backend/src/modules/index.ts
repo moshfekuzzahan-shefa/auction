@@ -25,6 +25,7 @@ import auctionRoutes from './auction/auction.routes';
 router.use('/public', publicRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/admin/users', userRoutes);
 router.use('/system', systemRoutes);
 router.use('/config', configRoutes);
 router.use('/player', playerRoutes);
