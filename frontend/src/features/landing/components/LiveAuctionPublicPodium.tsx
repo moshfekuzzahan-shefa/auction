@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
-import { Gavel, Activity } from 'lucide-react';
+import { Gavel, Activity, Crown, Trophy, ShieldAlert, Users, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSocketContext } from '../../../providers/SocketProvider';
@@ -59,6 +59,35 @@ export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuction
 
   const activeCategoryTheme = getCategoryTheme(auctionState?.currentPlayer?.category?.name);
 
+  // Teams list merge & real-time sorting
+  const rawTeams = auctionState?.teams || data?.teams || [];
+  const activeLeaderId = auctionState?.currentLeaderId;
+  const minRoster = auctionState?.minRoster || 11;
+  const lowestBasePrice = auctionState?.lowestBasePrice || 250;
+  const nextValidBid = auctionState?.nextValidBid || auctionState?.currentBid || 500;
+
+  const sortedTeams = [...rawTeams].sort((a: any, b: any) => {
+    if (a.id === activeLeaderId) return -1;
+    if (b.id === activeLeaderId) return 1;
+    const countA = a._count?.players ?? a.players?.length ?? 0;
+    const countB = b._count?.players ?? b.players?.length ?? 0;
+    if (countB !== countA) return countB - countA;
+    return a.budget - b.budget;
+  });
+
+  const getCategoryCounts = (team: any) => {
+    const players = team.players || [];
+    let pt = 0, au = 0, ag = 0, cu = 0;
+    players.forEach((p: any) => {
+      const catName = (p.category?.name || '').toLowerCase();
+      if (catName.includes('platinum')) pt++;
+      else if (catName.includes('gold')) au++;
+      else if (catName.includes('silver')) ag++;
+      else if (catName.includes('bronze')) cu++;
+    });
+    return { pt, au, ag, cu };
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in-50 slide-in-from-bottom-4">
       <div className="text-center space-y-4">
@@ -77,9 +106,10 @@ export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuction
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left/Top: Podium View */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid lg:grid-cols-12 gap-6">
+        
+        {/* Left/Top: Podium View (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
           <Card className={`border shadow-2xl overflow-hidden relative transition-all duration-500 bg-gradient-to-br ${activeCategoryTheme.bgGradient} ${activeCategoryTheme.border} ${activeCategoryTheme.glow}`}>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-purple-500 to-amber-500"></div>
             <CardHeader className="bg-slate-950/60 pb-6 border-b border-slate-800/80">
@@ -139,7 +169,7 @@ export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuction
                               ${auctionState.currentBid.toLocaleString()}
                             </p>
                             <p className="text-xs font-medium text-slate-400 mt-1">
-                              Leader: {auctionState.currentLeaderId ? (data?.teams?.find((t: any) => t.id === auctionState.currentLeaderId)?.name || 'Team Leader') : 'No bids placed yet'}
+                              Leader: {auctionState.currentLeaderId ? (rawTeams?.find((t: any) => t.id === auctionState.currentLeaderId)?.name || 'Team Leader') : 'No bids placed yet'}
                             </p>
                           </div>
                           <div className="text-right">
@@ -175,36 +205,140 @@ export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuction
           </Card>
         </div>
 
-        {/* Right/Bottom: Teams Status */}
-        <div className="space-y-6">
-          <Card className="h-full bg-slate-900/90 border-slate-800">
-            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
-              <CardTitle className="text-lg font-bold text-white">Franchises & Purses</CardTitle>
+        {/* Right: Dynamic Live Team Leaderboard Sidebar (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          <Card className="h-full bg-slate-900/90 border-slate-800 shadow-xl overflow-hidden">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800 py-4">
+              <CardTitle className="text-lg font-bold text-white flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                  <span>Franchise Leaderboard</span>
+                </div>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase tracking-wider font-bold">
+                  Phase 3 Live
+                </Badge>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {data?.teams && data.teams.length > 0 ? (
+              {sortedTeams.length > 0 ? (
                 <div className="space-y-3">
-                  {data.teams.map((team: any) => (
-                    <div key={team.id} className="flex items-center justify-between p-3 border border-slate-800 rounded-xl bg-slate-950">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-emerald-400 overflow-hidden">
-                          {team.logoUrl ? <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" /> : team.name.charAt(0)}
+                  {sortedTeams.map((team: any, index: number) => {
+                    const isCurrentLeader = team.id === activeLeaderId;
+                    const boughtCount = team._count?.players ?? team.players?.length ?? 0;
+                    const counts = getCategoryCounts(team);
+                    
+                    // Budget guardrail lock calculation
+                    const remainingSlotsNeeded = Math.max(0, minRoster - (boughtCount + 1));
+                    const reserveNeeded = remainingSlotsNeeded * lowestBasePrice;
+                    const maxAllowableBid = Math.max(0, team.budget - reserveNeeded);
+                    const isBudgetLocked = team.budget < nextValidBid || nextValidBid > maxAllowableBid;
+
+                    const rosterPercentage = Math.min(100, Math.round((boughtCount / minRoster) * 100));
+
+                    return (
+                      <div 
+                        key={team.id} 
+                        className={`p-3.5 rounded-2xl border transition-all duration-500 relative overflow-hidden ${
+                          isCurrentLeader
+                            ? 'bg-slate-950 border-emerald-500/80 shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/50'
+                            : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        {/* Current Leader Glow Line */}
+                        {isCurrentLeader && (
+                          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-green-400" />
+                        )}
+
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          
+                          {/* Left: Team Rank, Logo & Name */}
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-xs font-black text-slate-300 shrink-0">
+                              {isCurrentLeader ? (
+                                <Crown className="w-4 h-4 text-amber-400 animate-bounce" />
+                              ) : (
+                                `#${index + 1}`
+                              )}
+                            </div>
+
+                            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center font-bold text-emerald-400 overflow-hidden shrink-0 shadow-sm">
+                              {team.logoUrl ? (
+                                <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
+                              ) : (
+                                team.name.charAt(0)
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-white text-sm truncate max-w-[130px]">{team.name}</h4>
+                                {isCurrentLeader && (
+                                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9px] font-extrabold px-1.5 py-0.5">
+                                    TOP BIDDER
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                <span className="flex items-center"><Users className="w-3 h-3 mr-1 text-slate-500" /> {boughtCount}/{minRoster} Players</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Remaining Purse & Budget Lock */}
+                          <div className="text-right shrink-0">
+                            <div className="text-[10px] text-slate-400 uppercase font-semibold flex items-center justify-end">
+                              <Wallet className="w-3 h-3 mr-1 text-slate-500" /> Purse
+                            </div>
+                            <div className="font-extrabold font-mono text-emerald-400 text-sm">
+                              ${team.budget.toLocaleString()}
+                            </div>
+                            {isBudgetLocked && (
+                              <div className="mt-1">
+                                <span className="px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800 text-[9px] font-extrabold flex items-center inline-flex">
+                                  <ShieldAlert className="w-2.5 h-2.5 mr-0.5 shrink-0" /> Budget Locked
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
                         </div>
-                        <div className="font-bold text-white text-sm truncate max-w-[120px]">{team.name}</div>
+
+                        {/* Roster Progress Bar */}
+                        <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-2 border border-slate-800/50">
+                          <div 
+                            className={`h-full transition-all duration-500 ${isCurrentLeader ? 'bg-gradient-to-r from-emerald-500 to-green-400' : 'bg-emerald-600'}`}
+                            style={{ width: `${rosterPercentage}%` }}
+                          />
+                        </div>
+
+                        {/* Squad Category Pills */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-900">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mr-1">Squad Tiers:</span>
+                          <span className="px-2 py-0.5 rounded-md bg-purple-950/60 border border-purple-800/60 text-purple-300 text-[10px] font-bold">
+                            Pt: {counts.pt}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-amber-950/60 border border-amber-800/60 text-amber-300 text-[10px] font-bold">
+                            Au: {counts.au}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold">
+                            Ag: {counts.ag}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-orange-950/60 border border-orange-800/60 text-orange-300 text-[10px] font-bold">
+                            Cu: {counts.cu}
+                          </span>
+                        </div>
+
                       </div>
-                      <div className="text-right">
-                        <div className="text-[10px] text-slate-400 uppercase font-semibold">Purse</div>
-                        <div className="font-bold font-mono text-emerald-400 text-sm">${team.budget.toLocaleString()}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">Teams data loading...</p>
+                <p className="text-sm text-slate-400 text-center py-6">Franchise teams loading...</p>
               )}
             </CardContent>
           </Card>
         </div>
+
       </div>
 
       {/* Bottom: Upcoming / Unsold Players */}

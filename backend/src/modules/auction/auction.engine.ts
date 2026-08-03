@@ -333,10 +333,17 @@ export class AuctionEngine {
       select: {
         id: true,
         name: true,
+        logoUrl: true,
         budget: true,
         managerId: true,
         _count: {
           select: { players: true }
+        },
+        players: {
+          select: {
+            id: true,
+            category: { select: { name: true } }
+          }
         }
       }
     });
