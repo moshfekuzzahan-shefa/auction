@@ -1,8 +1,7 @@
-import { Card, CardContent } from './Card';
+import { Card } from './Card';
 import { Badge } from './Badge';
 import { Avatar } from './Avatar';
-import { getCategoryTheme } from '../../utils/categoryTheme';
-import { Trophy, Crown, Sparkles, Shield } from 'lucide-react';
+import { Trophy, Crown } from 'lucide-react';
 
 interface PlayerCardProps {
   player: any;
@@ -21,19 +20,54 @@ export const PlayerCard = ({
   onTogglePodiumAdmin,
   isAssignPodiumAdminMode = false
 }: PlayerCardProps) => {
-  const theme = getCategoryTheme(player.category?.name);
   const isPodiumAdmin = player.user?.role === 'PODIUM_ADMIN';
 
-  // Calculate dynamic OVR & FIFA stats based on tier and position
-  const getOvrRating = (catName?: string) => {
+  // Category Color Palette matching reference image
+  const getCardTheme = (catName?: string) => {
     const name = (catName || '').toLowerCase();
-    if (name.includes('platinum')) return 89;
-    if (name.includes('gold')) return 84;
-    if (name.includes('silver')) return 78;
-    return 74;
+    if (name.includes('platinum')) {
+      return {
+        bg: 'from-purple-900 via-fuchsia-950 to-slate-950',
+        badgeBg: 'from-pink-500 to-fuchsia-600 shadow-[0_0_15px_rgba(236,72,153,0.6)]',
+        border: 'border-fuchsia-500/40',
+        flag: '🇫🇷',
+        country: 'France',
+        badgeText: 'text-pink-300'
+      };
+    }
+    if (name.includes('gold')) {
+      return {
+        bg: 'from-emerald-800 via-green-950 to-slate-950',
+        badgeBg: 'from-emerald-400 to-lime-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]',
+        border: 'border-emerald-500/40',
+        flag: '🇧🇷',
+        country: 'Brazil',
+        badgeText: 'text-emerald-300'
+      };
+    }
+    if (name.includes('silver')) {
+      return {
+        bg: 'from-blue-900 via-slate-950 to-slate-950',
+        badgeBg: 'from-cyan-400 to-blue-500 shadow-[0_0_15px_rgba(6,182,212,0.6)]',
+        border: 'border-cyan-500/40',
+        flag: '🇺🇦',
+        country: 'Ukraine',
+        badgeText: 'text-cyan-300'
+      };
+    }
+    // Bronze / Default
+    return {
+      bg: 'from-amber-900 via-orange-950 to-slate-950',
+      badgeBg: 'from-amber-400 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]',
+      border: 'border-amber-500/40',
+      flag: '🇧🇩',
+      country: 'Bangladesh',
+      badgeText: 'text-amber-300'
+    };
   };
 
-  const ovr = getOvrRating(player.category?.name);
+  const theme = getCardTheme(player.category?.name);
+  const jerseyNum = player.studentId ? player.studentId.slice(-2) : '20';
 
   const handleCardClick = () => {
     if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
@@ -46,70 +80,56 @@ export const PlayerCard = ({
   return (
     <Card 
       onClick={handleCardClick}
-      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer ${
+      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer bg-gradient-to-b ${theme.bg} ${theme.border} ${
         isAssignPodiumAdminMode 
-          ? 'border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.5)] ring-2 ring-purple-400/80 scale-[1.01]' 
-          : `${theme.border} ${theme.glow} ${theme.bgGradient} hover:-translate-y-1.5 hover:shadow-2xl`
+          ? 'ring-4 ring-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.7)] scale-[1.02]' 
+          : 'hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(255,255,255,0.15)]'
       }`}
     >
-      {/* Background Watermark Soccer Ball Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none z-0" />
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none z-0" />
+      {/* Background Watermark Soccer Ball Graphic */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none z-0">
+        <svg className="w-64 h-64 text-white fill-current" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 13v1c0 1.1.9 2 2 2v2.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+      </div>
 
-      <div className="relative z-10 p-4 space-y-3">
+      {/* Top Ambient Glow Aura */}
+      <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Main Content Area */}
+      <div className="relative z-10 p-4 space-y-4">
         
-        {/* 1. FUT Top Header Row: Flag/Team (Left) & Category Badge (Right) */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-2.5 bg-slate-950/60 -mx-4 -mt-4 px-4 pt-3.5 backdrop-blur-md">
+        {/* 1. Top Bar: Flag & Country/Team Name */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base leading-none">🇧🇩</span>
-            <span className="text-[10px] font-black tracking-widest text-slate-300 uppercase truncate max-w-[100px]">
-              {player.team?.name || 'VARSITY CLUB'}
+            <span className="text-xl leading-none drop-shadow-md">{theme.flag}</span>
+            <span className="text-sm font-black tracking-wide text-white drop-shadow-sm truncate max-w-[120px]">
+              {player.team?.name || theme.country}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {isPodiumAdmin && (
-              <Badge className="bg-purple-950/90 text-purple-300 border border-purple-500/60 font-black text-[9px] px-2 py-0.5 shadow-[0_0_10px_rgba(168,85,247,0.4)] animate-pulse flex items-center gap-1">
-                <Crown className="w-3 h-3 text-purple-400" />
-                <span>PODIUM ADMIN</span>
-              </Badge>
-            )}
-
-            {player.category ? (
-              <Badge variant="outline" className={`${theme.badge} font-black text-[10px] px-2.5 py-0.5 shadow-sm uppercase tracking-wider`}>
-                {player.category.name} (${player.category.basePrice})
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="bg-slate-900/90 text-slate-400 border-slate-700 font-bold text-[9px] px-2 py-0.5">
-                Trial Pending
-              </Badge>
-            )}
-          </div>
+          {isPodiumAdmin && (
+            <Badge className="bg-purple-950/90 text-purple-300 border border-purple-500/60 font-black text-[9px] px-2 py-0.5 shadow-[0_0_12px_rgba(168,85,247,0.5)] animate-pulse flex items-center gap-1">
+              <Crown className="w-3 h-3 text-purple-400" />
+              <span>PODIUM ADMIN</span>
+            </Badge>
+          )}
         </div>
 
-        {/* 2. Middle: FIFA Player Avatar & Overlapping OVR Rating Badge */}
-        <div className="relative flex justify-center items-center py-2">
-          
-          {/* Prominent OVR Rating Badge (Left Overlap) */}
-          <div className="absolute left-2 top-2 flex flex-col items-center bg-slate-950/90 border border-white/20 rounded-2xl p-2 shadow-2xl z-20 backdrop-blur-md">
-            <span className="text-2xl font-black text-amber-400 tracking-tighter leading-none">{ovr}</span>
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-0.5">{player.primaryPos}</span>
-          </div>
-
-          {/* Centered Avatar Image */}
-          <div className={`w-24 h-24 rounded-full border-2 ${theme.border} bg-slate-950 p-0.5 shadow-2xl overflow-hidden flex justify-center items-center ${theme.glow} group-hover:scale-105 transition-transform duration-300`}>
+        {/* 2. Middle: Player Avatar Silhouette / Photo */}
+        <div className="relative flex justify-center items-end h-44 pt-2">
+          <div className="w-36 h-40 relative flex justify-center items-end group-hover:scale-105 transition-transform duration-300">
             <Avatar 
               src={player.imageUrl || player.publicId} 
               alt={player.user?.name} 
               fallback={player.user?.name?.charAt(0)}
               size="xl" 
-              className="w-full h-full object-cover rounded-full"
+              className="w-full h-full object-cover rounded-2xl drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]"
             />
           </div>
 
-          {/* Sold Team Badge overlay if sold */}
           {player.isSold && (
-            <div className="absolute right-2 top-2 z-20">
+            <div className="absolute top-0 right-0 z-20">
               <Badge className="bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 text-[10px] font-extrabold px-2 py-0.5 shadow-lg flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-emerald-400" />
                 <span>{player.team?.name}</span>
@@ -118,48 +138,49 @@ export const PlayerCard = ({
           )}
         </div>
 
-        {/* 3. Name & Identity Section */}
-        <div className="text-center space-y-1">
-          <h3 className={`font-black text-xl tracking-tight leading-tight truncate drop-shadow-md ${theme.accentText}`}>
-            {player.user?.name}
-          </h3>
-          <p className="text-xs text-slate-400 font-semibold truncate">
-            {player.jerseyName ? `${player.jerseyName} • ` : ''}ID: {player.studentId || 'N/A'}
-          </p>
-        </div>
+        {/* 3. Bottom Dark Overlay Dock (Reference Image Exact Match) */}
+        <div className="bg-slate-950/90 border border-white/10 rounded-2xl p-4 pt-6 relative backdrop-blur-xl shadow-2xl space-y-3">
+          
+          {/* Center Overlapping Number Badge */}
+          <div className={`absolute -top-4 left-1/2 -translate-x-1/2 w-11 h-9 rounded-xl bg-gradient-to-r ${theme.badgeBg} flex items-center justify-center font-black text-white text-base shadow-lg border border-white/30`}>
+            {jerseyNum}
+          </div>
 
-        {/* 4. FIFA Ultimate Team Attributes Grid Breakdown */}
-        <div className="bg-slate-950/80 border border-white/10 rounded-2xl p-2.5 grid grid-cols-3 gap-1.5 text-center text-[10px] font-extrabold backdrop-blur-md">
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">PAC</span>
-            <span className="text-emerald-400 font-black">{ovr - 2}</span>
+          {/* Side Stats Row (PAS 89 | 78 DEF) */}
+          <div className="flex justify-between items-center text-xs font-black px-2 pt-1 border-b border-slate-800 pb-2">
+            <div className="flex items-center gap-1.5 text-slate-300">
+              <span className="text-slate-400 font-bold text-[10px]">PAS</span>
+              <span className="text-white text-sm font-black">89</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-300">
+              <span className="text-white text-sm font-black">78</span>
+              <span className="text-slate-400 font-bold text-[10px]">DEF</span>
+            </div>
           </div>
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">PAS</span>
-            <span className="text-emerald-400 font-black">{ovr - 4}</span>
+
+          {/* Player Name */}
+          <div className="text-center">
+            <h3 className="font-black text-xl text-white tracking-tight leading-none truncate drop-shadow-md">
+              {player.user?.name}
+            </h3>
           </div>
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">DRI</span>
-            <span className="text-emerald-400 font-black">{ovr + 1}</span>
+
+          {/* Bottom Pills Tag Box */}
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <span className="px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider">
+              {player.primaryPos || 'CM'}
+            </span>
+            <span className={`px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 ${theme.badgeText} text-[10px] font-black uppercase tracking-wider`}>
+              {player.category?.name || 'UNASSIGNED'}
+            </span>
           </div>
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">DEF</span>
-            <span className="text-emerald-400 font-black">{ovr - 5}</span>
-          </div>
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">PHY</span>
-            <span className="text-emerald-400 font-black">{ovr - 3}</span>
-          </div>
-          <div className="bg-slate-900/60 p-1 rounded-xl border border-slate-800">
-            <span className="text-slate-400 block text-[9px]">OVR</span>
-            <span className="text-amber-400 font-black">{ovr}</span>
-          </div>
+
         </div>
 
       </div>
 
-      {/* 5. Admin Category Tier Selector Footer */}
-      <div className="p-3 border-t border-white/10 bg-slate-950/90 backdrop-blur-md relative z-10">
+      {/* 4. Admin Category Tier Selector Footer */}
+      <div className="p-3 border-t border-white/10 bg-slate-950/95 relative z-10">
         <select 
           value={player.categoryId || player.category?.id || ''}
           onClick={(e) => e.stopPropagation()}
@@ -178,8 +199,8 @@ export const PlayerCard = ({
         </select>
 
         {isAssignPodiumAdminMode && (
-          <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-purple-300 bg-purple-950/80 p-1.5 rounded-xl border border-purple-600/50 animate-pulse">
-            Click Card to Toggle Podium Admin
+          <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-purple-300 bg-purple-950/90 p-1.5 rounded-xl border border-purple-600/50 animate-pulse shadow-lg">
+            Click Card to Assign Podium Admin
           </div>
         )}
       </div>
