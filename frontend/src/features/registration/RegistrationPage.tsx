@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { FileUpload } from '../../components/ui/FileUpload';
 import api from '../../services/api';
 
+import { FootballPitchSideHero } from '../../components/layout/FootballPitchSideHero';
+
 export const RegistrationPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -106,13 +108,20 @@ export const RegistrationPage = () => {
   ];
 
   return (
-    <div className="container mx-auto py-10 px-4 max-w-2xl animate-in fade-in zoom-in-95">
-      <Card className="shadow-lg border-primary/20">
-        <CardHeader className="bg-primary/5 border-b">
-          <CardTitle className="text-2xl font-bold">Player Registration</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">Complete your profile to enter the auction pool.</p>
-        </CardHeader>
-        <CardContent className="pt-6">
+    <div className="container mx-auto py-8 px-4 max-w-5xl animate-in fade-in zoom-in-95">
+      <div className="bg-card rounded-2xl shadow-2xl border border-border grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        {/* Left Side 5 cols: Football Pitch Hero */}
+        <div className="lg:col-span-5 flex flex-col">
+          <FootballPitchSideHero subtitle="Submit your profile, jersey name, session & tier to get drafted in the live auction." />
+        </div>
+
+        {/* Right Side 7 cols: Player Registration Form */}
+        <div className="lg:col-span-7 p-6 md:p-10 flex flex-col justify-center">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">Player Registration</h2>
+            <p className="text-sm text-muted-foreground mt-1">Complete your player profile to enter the auction pool.</p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
@@ -200,8 +209,8 @@ export const RegistrationPage = () => {
               {registerMutation.isPending ? 'Registering...' : 'Complete Registration'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
