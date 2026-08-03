@@ -5,7 +5,6 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware';
 import routes from './modules';
-
 import hpp from 'hpp';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
@@ -14,6 +13,20 @@ const app = express();
 
 // Trust reverse proxy (Render / Vercel) for rate-limiting & IP forwarding
 app.set('trust proxy', 1);
+
+// Server Request Timeout Safeguard (15 seconds max execution)
+app.use((req, res, next) => {
+  res.setTimeout(15000, () => {
+    if (!res.headersSent) {
+      res.status(504).json({
+        success: false,
+        message: 'Server Request Timeout: Operation took too long to respond.',
+        timestamp: Date.now()
+      });
+    }
+  });
+  next();
+});
 
 const isOriginAllowed = (origin: string | undefined): boolean => {
   if (!origin) return true; // Allow requests with no origin (mobile apps, Postman, curl)
@@ -55,8 +68,8 @@ app.use(cookieParser());
 // Prevent parameter pollution
 app.use(hpp());
 
-// Lightweight Health Check Route (No DB / Redis Lock)
-app.get('/api/health', (req, res) => {
+// Lightweight Standalone Health Check Route (No DB / Redis Lock)
+app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: Date.now(), uptime: Math.floor(process.uptime()) });
 });
 
@@ -93,7 +106,7 @@ if (process.env.REDIS_URL) {
 const limiter = rateLimit({
   ...(limiterStore ? { store: limiterStore } : {}),
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
 });

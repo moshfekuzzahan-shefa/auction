@@ -22,21 +22,29 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
   useEffect(() => {
     if (isAuthenticated && token && !socketInstance) {
-      const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // Support dedicated persistent socket URL (e.g. Render backend) or fallback to VITE_API_URL
+      const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'https://football-platform-backend.onrender.com';
       const cleanUrl = rawUrl.replace(/\/+$/, '').replace(/\/api$/, '');
 
       socketInstance = io(cleanUrl, {
         auth: { token },
-        transports: ['websocket'],
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000,
       });
 
       socketInstance.on('connect', () => {
-        console.log('Connected to socket server');
+        console.log('Connected to WebSocket server:', cleanUrl);
         setSocket(socketInstance);
       });
 
+      socketInstance.on('connect_error', (err) => {
+        console.warn('Socket connection error (deferring):', err.message);
+      });
+
       socketInstance.on('disconnect', () => {
-        console.log('Disconnected from socket server');
+        console.log('Disconnected from WebSocket server');
         setSocket(null);
       });
     }
