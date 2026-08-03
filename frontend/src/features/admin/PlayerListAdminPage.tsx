@@ -38,12 +38,22 @@ export const PlayerListAdminPage = () => {
     }
   });
 
-  const categories = publicConfig?.categories || [
-    { id: 'c1', name: 'Platinum', basePrice: 1000 },
-    { id: 'c2', name: 'Gold', basePrice: 750 },
-    { id: 'c3', name: 'Silver', basePrice: 500 },
-    { id: 'c4', name: 'Bronze', basePrice: 250 },
-  ];
+  const { data: dbCategories } = useQuery({
+    queryKey: ['categories', 'all'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/categories');
+        return res.data.data;
+      } catch {
+        const res = await api.get('/public/landing');
+        return res.data.data?.categories || [];
+      }
+    }
+  });
+
+  const categories = dbCategories && dbCategories.length > 0 
+    ? dbCategories 
+    : (publicConfig?.categories || []);
 
   const positions = publicConfig?.positions || [
     { id: 'p1', code: 'GK', name: 'Goalkeeper' },

@@ -12,6 +12,15 @@ export class PublicController {
     }
   }
 
+  static async getCategories(req: Request, res: Response, next: NextFunction) {
+    try {
+      const categories = await PublicService.getCategories();
+      return sendSuccessResponse({ res, data: categories });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+    }
+  }
+
   static async getNews(req: Request, res: Response, next: NextFunction) {
     try {
       const news = await PublicService.getNews();

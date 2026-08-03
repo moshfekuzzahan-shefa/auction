@@ -7,6 +7,9 @@ export class PublicService {
     if (!system) throw new Error('System state not initialized');
 
     const phase = system.currentPhase;
+    const categories = await prisma.playerCategory.findMany({ orderBy: { basePrice: 'desc' } });
+    const positions = await prisma.playerPosition.findMany();
+
     const basePayload = {
       phase,
       message: '',
@@ -23,7 +26,10 @@ export class PublicService {
         return {
           ...basePayload,
           message: 'Coming Soon: The event is currently being configured.',
-          data: null
+          data: {
+            categories,
+            positions
+          }
         };
         
       case 'REGISTRATION':
@@ -31,8 +37,8 @@ export class PublicService {
           ...basePayload,
           message: 'Registration is now open.',
           data: {
-            categories: await prisma.playerCategory.findMany(),
-            positions: await prisma.playerPosition.findMany(),
+            categories,
+            positions,
             sessions: await prisma.academicSession.findMany(),
           }
         };
@@ -42,6 +48,8 @@ export class PublicService {
           ...basePayload,
           message: 'The Live Auction is happening right now!',
           data: {
+            categories,
+            positions,
             teams: await prisma.team.findMany({
               select: {
                 id: true,
@@ -66,6 +74,8 @@ export class PublicService {
           ...basePayload,
           message: 'Welcome to the Football Dashboard!',
           data: {
+            categories,
+            positions,
             standings: await TournamentService.getStandings(),
             matches: {
               live: await prisma.match.findMany({ where: { status: 'LIVE' }, include: { homeTeam: true, awayTeam: true } }),
@@ -80,8 +90,15 @@ export class PublicService {
         };
 
       default:
-        return basePayload;
+        return {
+          ...basePayload,
+          data: { categories, positions }
+        };
     }
+  }
+
+  static async getCategories() {
+    return prisma.playerCategory.findMany({ orderBy: { basePrice: 'desc' } });
   }
 
   static async getNews() {

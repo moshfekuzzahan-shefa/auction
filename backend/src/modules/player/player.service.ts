@@ -129,18 +129,39 @@ export class PlayerService {
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
     if (!profile) throw new Error('Player profile not found.');
 
-    let basePrice = data.basePrice;
-    if (data.categoryId) {
-      const category = await prisma.playerCategory.findUnique({ where: { id: data.categoryId } });
-      if (category) {
+    let basePrice: number | null | undefined = undefined;
+    let validCategoryId: string | null | undefined = undefined;
+
+    if (data.categoryId !== undefined) {
+      if (!data.categoryId || data.categoryId === 'null' || data.categoryId === 'unassigned') {
+        validCategoryId = null;
+        basePrice = null;
+      } else {
+        // 1. Try finding category by exact primary key ID
+        let category = await prisma.playerCategory.findUnique({ where: { id: data.categoryId } });
+        
+        // 2. Fallback: try finding category by name (case-insensitive) if tier name was passed
+        if (!category) {
+          category = await prisma.playerCategory.findFirst({
+            where: { name: { equals: data.categoryId, mode: 'insensitive' } }
+          });
+        }
+
+        if (!category) {
+          throw new Error(`Invalid Category ID provided: "${data.categoryId}". Category tier does not exist in database.`);
+        }
+
+        validCategoryId = category.id;
         basePrice = category.basePrice;
       }
+    } else if (data.basePrice !== undefined) {
+      basePrice = data.basePrice;
     }
 
     return prisma.profile.update({
       where: { id: profileId },
       data: {
-        ...(data.categoryId !== undefined ? { categoryId: data.categoryId || null } : {}),
+        ...(validCategoryId !== undefined ? { categoryId: validCategoryId } : {}),
         ...(basePrice !== undefined ? { basePrice } : {}),
         ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
         ...(data.secondaryPos !== undefined ? { secondaryPos: Array.isArray(data.secondaryPos) ? data.secondaryPos : data.secondaryPos.split(',') } : {}),

@@ -12,9 +12,13 @@ import tournamentRoutes from './tournament/tournament.routes';
 import publicRoutes from './public/public.routes';
 import resetRoutes from './reset/reset.routes';
 
+import { PublicController } from './public/public.controller';
+
 router.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'API is running' });
 });
+
+router.get('/categories', PublicController.getCategories);
 
 import auctionRoutes from './auction/auction.routes';
 
