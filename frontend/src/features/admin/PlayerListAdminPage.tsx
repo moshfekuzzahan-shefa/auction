@@ -17,6 +17,7 @@ export const PlayerListAdminPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [isAssignPodiumAdminMode, setIsAssignPodiumAdminMode] = useState(false);
 
   // Editable fields in modal
   const [editCategoryId, setEditCategoryId] = useState<string>('');
@@ -205,17 +206,30 @@ export const PlayerListAdminPage = () => {
           <p className="text-slate-400 text-sm">Super Admin Scouting Panel & Category Tier Assignment.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsAssignPodiumAdminMode(!isAssignPodiumAdminMode)}
+            className={isAssignPodiumAdminMode
+              ? "bg-purple-600 hover:bg-purple-500 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] font-black text-xs rounded-xl animate-pulse"
+              : "bg-slate-900 hover:bg-slate-800 border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl"
+            }
+          >
+            <Crown className="w-4 h-4 mr-1.5 text-purple-400" />
+            <span>{isAssignPodiumAdminMode ? 'Podium Admin Mode: ACTIVE' : 'Assign Podium Admin Mode'}</span>
+          </Button>
+
+          <div className="relative w-full sm:w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by name, ID, or position..." 
+              placeholder="Search name, ID, position..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-slate-900 border-slate-800 text-white"
+              className="pl-9 bg-slate-900 border-slate-800 text-white rounded-xl text-xs"
             />
           </div>
-          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
             <Button 
               variant={viewMode === 'grid' ? 'primary' : 'ghost'} 
               size="sm"
@@ -236,6 +250,23 @@ export const PlayerListAdminPage = () => {
         </div>
       </div>
 
+      {isAssignPodiumAdminMode && (
+        <div className="p-3.5 bg-purple-950/60 border border-purple-500/50 rounded-2xl text-purple-200 text-xs font-bold flex items-center justify-between shadow-lg animate-pulse">
+          <div className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-purple-400 shrink-0" />
+            <span>PODIUM ADMIN ASSIGNMENT MODE ACTIVE: Click on any player card below to grant or revoke Podium Admin rights.</span>
+          </div>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => setIsAssignPodiumAdminMode(false)}
+            className="text-purple-300 hover:text-white text-xs underline font-bold"
+          >
+            Exit Mode
+          </Button>
+        </div>
+      )}
+
       {filteredPlayers.length === 0 ? (
         <Card className="bg-slate-900/90 border-slate-800">
           <CardContent className="flex flex-col items-center justify-center py-16 text-slate-400">
@@ -255,6 +286,7 @@ export const PlayerListAdminPage = () => {
                 quickAssignCategoryMutation.mutate({ profileId, categoryId });
               }}
               onTogglePodiumAdmin={handleTogglePodiumAdmin}
+              isAssignPodiumAdminMode={isAssignPodiumAdminMode}
             />
           ))}
         </div>
