@@ -55,26 +55,49 @@ app.use(cookieParser());
 // Prevent parameter pollution
 app.use(hpp());
 
+// Lightweight Health Check Route (No DB / Redis Lock)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now(), uptime: Math.floor(process.uptime()) });
+});
+
 import RedisStore from 'rate-limit-redis';
 import { createClient } from 'redis';
 
-// Redis client setup
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
-redisClient.connect().catch(console.error);
+// Safe Redis rate-limiting setup with in-memory fallback
+let limiterStore: any = undefined;
 
-// Rate limiting setup with Redis & Trust Proxy
+if (process.env.REDIS_URL) {
+  try {
+    const redisClient = createClient({ url: process.env.REDIS_URL });
+    redisClient.on('error', (err) => console.warn('Redis Client Warning:', err?.message || err));
+    redisClient.connect().catch((err) => console.warn('Redis connection deferred:', err?.message));
+
+    limiterStore = new RedisStore({
+      sendCommand: async (...args: string[]) => {
+        try {
+          if (redisClient.isOpen) {
+            return await redisClient.sendCommand(args);
+          }
+        } catch (e) {
+          console.warn('Redis sendCommand failed, falling back:', e);
+        }
+        return undefined as any;
+      },
+    });
+  } catch (err) {
+    console.warn('Failed to initialize RedisStore:', err);
+  }
+}
+
+// Rate limiting setup (falls back to memory if Redis is unavailable)
 const limiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
-  }),
+  ...(limiterStore ? { store: limiterStore } : {}),
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 app.use('/api', limiter);
 
 // Mount main routing architecture
