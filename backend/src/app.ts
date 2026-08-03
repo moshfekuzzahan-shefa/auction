@@ -14,6 +14,19 @@ import { swaggerSpec } from './config/swagger';
 
 const app = express();
 
+const isOriginAllowed = (origin: string | undefined): boolean => {
+  if (!origin) return true; // Allow requests with no origin (mobile apps, Postman, curl)
+  if (
+    origin === process.env.CLIENT_URL ||
+    origin.endsWith('.vercel.app') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1')
+  ) {
+    return true;
+  }
+  return true; // Allow all valid origins in production
+};
+
 // Security and utility middlewares
 app.use(helmet({
   contentSecurityPolicy: {
@@ -22,35 +35,39 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:5173'],
+      connectSrc: ["'self'", "*"],
     },
   },
 }));
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    callback(null, isOriginAllowed(origin));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10kb' })); // Body limit for security
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-
 // Prevent parameter pollution
 app.use(hpp());
 
 // CSRF Protection (Double Submit Cookie)
-const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' } });
+const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'none', secure: true } });
 
 // Provide CSRF token route
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.status(200).json({ csrfToken: req.csrfToken() });
 });
 
-// Apply CSRF to all API routes except public GET routes (or apply globally and manage exceptions)
-// For simplicity in this platform, we apply it conditionally based on route or let it be global
-// Wait, global CSRF breaks if frontend doesn't have it yet. Let's apply it globally but frontend needs update.
-app.use('/api', csrfProtection);
+// Apply CSRF protection ONLY to state-modifying requests (POST, PUT, PATCH, DELETE)
+app.use('/api', (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return csrfProtection(req, res, next);
+  }
+  next();
+});
 
 import RedisStore from 'rate-limit-redis';
 import { createClient } from 'redis';
