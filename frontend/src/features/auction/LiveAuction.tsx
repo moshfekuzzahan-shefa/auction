@@ -95,7 +95,11 @@ export const LiveAuction = () => {
         <div className="flex items-center space-x-4">
           <div className="text-center">
             <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Timer</span>
-            <div className="text-3xl font-mono font-black text-emerald-400 bg-slate-950 px-4 py-1.5 rounded-xl border border-slate-800 shadow-inner">
+            <div className={`text-3xl font-mono font-black px-4 py-1.5 rounded-xl border transition-all shadow-inner ${
+              (auctionState.timer || 0) <= 10 
+                ? 'text-red-400 bg-red-950/60 border-red-800 animate-pulse shadow-[0_0_25px_rgba(239,68,68,0.5)]' 
+                : 'text-emerald-400 bg-slate-950 border-slate-800'
+            }`}>
               00:{auctionState.timer?.toString().padStart(2, '0') || '00'}
             </div>
           </div>

@@ -67,10 +67,16 @@ export const setupSockets = (httpServer: HttpServer) => {
     socket.on('PODIUM_PULL_PLAYER', (data) => {
       logger.info(`Received PODIUM_PULL_PLAYER from ${socket.id}, role: ${socket.data.user.role}, data: ${JSON.stringify(data)}`);
       if (socket.data.user.role === 'PODIUM_ADMIN' || socket.data.user.role === 'SUPER_ADMIN') {
-        auctionEngine.startAuction(data.playerId, data.mode, data.basePrice).catch(err => {
+        auctionEngine.startAuction(data.playerId, data.mode, data.basePrice, data.timerSeconds).catch(err => {
           logger.error('Error starting auction:', err);
           socket.emit('ERROR', err.message);
         });
+      }
+    });
+
+    socket.on('EXTEND_TIMER', (data) => {
+      if (socket.data.user.role === 'PODIUM_ADMIN' || socket.data.user.role === 'SUPER_ADMIN') {
+        auctionEngine.extendTimer(Number(data?.seconds) || 10);
       }
     });
 

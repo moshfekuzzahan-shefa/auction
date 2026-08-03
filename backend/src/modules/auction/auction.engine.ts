@@ -115,6 +115,15 @@ export class AuctionEngine {
     this.broadcastState();
   }
 
+  public extendTimer(seconds: number = 10) {
+    if (this.status === 'ACTIVE' || this.status === 'PAUSED') {
+      this.timer += seconds;
+      this.io.emit('TIMER_TICK', { timer: this.timer });
+      this.io.emit('TIMER_EXTENDED', { addedSeconds: seconds, newTimer: this.timer });
+      this.broadcastState();
+    }
+  }
+
   public toggleBidMode(mode: AuctionMode) {
     if (this.status === 'IDLE') {
       this.mode = mode;
