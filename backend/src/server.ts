@@ -5,7 +5,7 @@ import { setupSockets } from './sockets';
 import logger from './utils/logger';
 import { seedSuperAdmin } from './utils/seed';
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Create HTTP Server
 const server = http.createServer(app);
@@ -14,7 +14,7 @@ const server = http.createServer(app);
 setupSockets(server);
 
 // Start Server
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   await seedSuperAdmin();
   logger.info(`Server is running on port ${PORT}`);
 });
