@@ -61,9 +61,18 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.status(200).json({ csrfToken: req.csrfToken() });
 });
 
-// Apply CSRF protection ONLY to state-modifying requests (POST, PUT, PATCH, DELETE)
+// Paths that do not require CSRF token validation (login, registration, public routes)
+const csrfExcludedPaths = [
+  '/auth/login',
+  '/auth/register',
+  '/player/register',
+  '/csrf-token'
+];
+
+// Apply CSRF protection ONLY to state-modifying requests (POST, PUT, PATCH, DELETE) except auth/public
 app.use('/api', (req, res, next) => {
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+  const isExcluded = csrfExcludedPaths.some(path => req.path.includes(path));
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !isExcluded) {
     return csrfProtection(req, res, next);
   }
   next();
