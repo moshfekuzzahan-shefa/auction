@@ -5,10 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/Dialog';
+import { Plus, Trash2, Shield, Save } from 'lucide-react';
 import api from '../../services/api';
 import { TeamManagerForm } from './TeamManagerForm';
 import { useAppDispatch } from '../../store/hooks';
 import { setPhase } from '../../store/systemSlice';
+
+interface CategoryRow {
+  name: string;
+  basePrice: number | string;
+}
 
 export const AdminDashboard = () => {
   const queryClient = useQueryClient();
@@ -23,6 +29,13 @@ export const AdminDashboard = () => {
     auctionStart: '',
     auctionEnd: ''
   });
+
+  const [categoriesList, setCategoriesList] = useState<CategoryRow[]>([
+    { name: 'Platinum', basePrice: 1000 },
+    { name: 'Gold', basePrice: 750 },
+    { name: 'Silver', basePrice: 500 },
+    { name: 'Bronze', basePrice: 250 },
+  ]);
 
   const { data: systemState, isLoading } = useQuery({
     queryKey: ['system', 'state'],
@@ -45,6 +58,9 @@ export const AdminDashboard = () => {
         auctionStart: systemState.auctionStart ? new Date(systemState.auctionStart).toISOString().slice(0, 16) : '',
         auctionEnd: systemState.auctionEnd ? new Date(systemState.auctionEnd).toISOString().slice(0, 16) : '',
       });
+      if (systemState.categories && Array.isArray(systemState.categories) && systemState.categories.length > 0) {
+        setCategoriesList(systemState.categories.map((c: any) => ({ name: c.name, basePrice: c.basePrice })));
+      }
     }
   }, [systemState]);
 
@@ -63,6 +79,68 @@ export const AdminDashboard = () => {
       toast.error(error.response?.data?.message || 'Failed to update phase');
     }
   });
+
+  const updateCategoriesMutation = useMutation({
+    mutationFn: async (payload: { name: string; basePrice: number }[]) => {
+      const res = await api.put('/system/categories', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      toast.success('Category Base Prices updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['system'] });
+      queryClient.invalidateQueries({ queryKey: ['public'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to update categories');
+    }
+  });
+
+  const handleAddCategoryRow = () => {
+    setCategoriesList(prev => [...prev, { name: '', basePrice: 250 }]);
+  };
+
+  const handleRemoveCategoryRow = (index: number) => {
+    if (categoriesList.length <= 1) {
+      toast.error('You must keep at least one category tier.');
+      return;
+    }
+    setCategoriesList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCategoryRowChange = (index: number, field: 'name' | 'basePrice', value: string) => {
+    setCategoriesList(prev => {
+      const updated = [...prev];
+      if (field === 'basePrice') {
+        updated[index].basePrice = value;
+      } else {
+        updated[index].name = value;
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveCategories = () => {
+    // Validate
+    for (let i = 0; i < categoriesList.length; i++) {
+      const cat = categoriesList[i];
+      if (!cat.name.trim()) {
+        toast.error(`Category row #${i + 1} name cannot be empty.`);
+        return;
+      }
+      const priceNum = Number(cat.basePrice);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        toast.error(`Category "${cat.name}" base price must be a positive number greater than 0.`);
+        return;
+      }
+    }
+
+    const payload = categoriesList.map(c => ({
+      name: c.name.trim(),
+      basePrice: Number(c.basePrice)
+    }));
+
+    updateCategoriesMutation.mutate(payload);
+  };
 
   const nukeMutation = useMutation({
     mutationFn: async () => {
@@ -90,7 +168,7 @@ export const AdminDashboard = () => {
     nukeMutation.mutate();
   };
 
-  if (isLoading) return <div className="p-8">Loading System Config...</div>;
+  if (isLoading) return <div className="p-8 text-center text-slate-400">Loading System Config...</div>;
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -101,11 +179,12 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Event Lifecycle Control */}
       <Card>
         <CardHeader>
           <CardTitle>Event Lifecycle Control</CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-4">
+        <CardContent className="flex flex-wrap gap-4">
           {['SETUP', 'REGISTRATION', 'AUCTION', 'TOURNAMENT'].map((phase) => (
             <Button
               key={phase}
@@ -119,6 +198,7 @@ export const AdminDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Event Schedule & Countdowns */}
       <Card>
         <CardHeader>
           <CardTitle>Event Schedule & Countdowns</CardTitle>
@@ -176,13 +256,14 @@ export const AdminDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Budget & Roster Rules */}
       <Card>
         <CardHeader>
           <CardTitle>Budget & Roster Rules</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1 space-y-2">
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1 space-y-2 w-full">
               <label className="text-sm font-medium">Total Team Budget ($)</label>
               <Input 
                 type="number"
@@ -190,7 +271,7 @@ export const AdminDashboard = () => {
                 onChange={(e) => setBudgetConfig(prev => ({ ...prev, totalBudget: Number(e.target.value) }))}
               />
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 w-full">
               <label className="text-sm font-medium">Minimum Roster Size</label>
               <Input 
                 type="number"
@@ -216,39 +297,90 @@ export const AdminDashboard = () => {
 
       <TeamManagerForm />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Player Categories & Base Prices Configuration</CardTitle>
-          <p className="text-sm text-muted-foreground">Configure player category tiers and their respective base starting prices (e.g. Platinum = $1000, Gold = $750, Silver = $500, Bronze = $250).</p>
+      {/* Dynamic Player Categories & Base Prices Form */}
+      <Card className="bg-slate-900/90 border-slate-800">
+        <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+          <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+            <Shield className="w-5 h-5 text-emerald-400" />
+            <span>Player Categories & Base Prices Configuration</span>
+          </CardTitle>
+          <p className="text-xs text-slate-400">
+            Define player category tiers and their starting auction base prices.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Categories & Base Prices (JSON)</label>
-            <textarea 
-              className="w-full h-32 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-              placeholder={'[\n  { "name": "Platinum", "basePrice": 1000 },\n  { "name": "Gold", "basePrice": 750 },\n  { "name": "Silver", "basePrice": 500 },\n  { "name": "Bronze", "basePrice": 250 }\n]'}
-              id="categories-json"
-            />
-            <Button 
-              size="sm"
-              onClick={() => {
-                try {
-                  const val = (document.getElementById('categories-json') as HTMLTextAreaElement).value;
-                  const parsed = JSON.parse(val);
-                  api.put('/system/categories', parsed)
-                    .then(() => toast.success('Categories updated'))
-                    .catch((err) => toast.error(err.response?.data?.message || 'Error updating'));
-                } catch (e) {
-                  toast.error('Invalid JSON');
-                }
-              }}
+
+        <CardContent className="p-6 space-y-4">
+          
+          {/* Header Labels */}
+          <div className="grid grid-cols-12 gap-3 text-xs uppercase font-extrabold tracking-wider text-slate-400 px-1">
+            <div className="col-span-6">Category Tier Name</div>
+            <div className="col-span-5">Base Price ($)</div>
+            <div className="col-span-1 text-center">Action</div>
+          </div>
+
+          {/* Dynamic Rows */}
+          <div className="space-y-3">
+            {categoriesList.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <div className="col-span-6">
+                  <Input 
+                    value={row.name}
+                    onChange={(e) => handleCategoryRowChange(idx, 'name', e.target.value)}
+                    placeholder="e.g. Platinum, Gold, Silver"
+                    className="h-10 bg-slate-900 border-slate-700 text-white text-sm font-semibold rounded-lg"
+                  />
+                </div>
+                <div className="col-span-5">
+                  <Input 
+                    type="number"
+                    value={row.basePrice}
+                    onChange={(e) => handleCategoryRowChange(idx, 'basePrice', e.target.value)}
+                    placeholder="Base Price ($)"
+                    min={1}
+                    className="h-10 bg-slate-900 border-slate-700 text-emerald-400 font-mono font-bold text-sm rounded-lg"
+                  />
+                </div>
+                <div className="col-span-1 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCategoryRow(idx)}
+                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                    title="Remove Category"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action Buttons: Add Tier & Save */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddCategoryRow}
+              className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2"
             >
-              Update Category Base Prices
+              <Plus className="w-4 h-4 text-emerald-400" />
+              <span>Add Category Tier</span>
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleSaveCategories}
+              disabled={updateCategoriesMutation.isPending}
+              className="w-full sm:w-auto h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 rounded-xl shadow-lg shadow-emerald-950/50 flex items-center space-x-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>Update Category Base Prices</span>
             </Button>
           </div>
+
         </CardContent>
       </Card>
 
+      {/* Danger Zone: Nuke Protocols */}
       <Card className="border-destructive shadow-sm">
         <CardHeader>
           <CardTitle className="text-destructive">Danger Zone: Nuke Protocols</CardTitle>
@@ -283,6 +415,7 @@ export const AdminDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Nuke Protocol Confirmation Modal */}
       <Dialog open={nukeLevel > 0} onOpenChange={(open) => !open && setNukeLevel(0)}>
         <DialogContent>
           <DialogHeader>
