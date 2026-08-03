@@ -218,15 +218,15 @@ export const AdminDashboard = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Advanced Configuration (JSON)</CardTitle>
-          <p className="text-sm text-muted-foreground">Update Base Prices (Categories) and Bid Tiers (Rules) directly.</p>
+          <CardTitle>Player Categories & Base Prices Configuration</CardTitle>
+          <p className="text-sm text-muted-foreground">Configure player category tiers and their respective base starting prices (e.g. Platinum = $1000, Gold = $750, Silver = $500, Bronze = $250).</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Categories Array (JSON)</label>
+            <label className="text-sm font-medium">Categories & Base Prices (JSON)</label>
             <textarea 
               className="w-full h-32 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-              placeholder={'[\n  { "name": "A", "basePrice": 1000 },\n  { "name": "B", "basePrice": 500 }\n]'}
+              placeholder={'[\n  { "name": "Platinum", "basePrice": 1000 },\n  { "name": "Gold", "basePrice": 750 },\n  { "name": "Silver", "basePrice": 500 },\n  { "name": "Bronze", "basePrice": 250 }\n]'}
               id="categories-json"
             />
             <Button 
@@ -243,31 +243,7 @@ export const AdminDashboard = () => {
                 }
               }}
             >
-              Update Categories
-            </Button>
-          </div>
-          <div className="space-y-2 pt-4">
-            <label className="text-sm font-medium">Bid Rules Array (JSON)</label>
-            <textarea 
-              className="w-full h-32 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-              placeholder={'[\n  { "minBudgetPercent": 0.0, "maxBudgetPercent": 0.03, "raisePercent": 0.0015 },\n  { "minBudgetPercent": 0.03, "maxBudgetPercent": 1.0, "raisePercent": 0.005 }\n]'}
-              id="rules-json"
-            />
-            <Button 
-              size="sm"
-              onClick={() => {
-                try {
-                  const val = (document.getElementById('rules-json') as HTMLTextAreaElement).value;
-                  const parsed = JSON.parse(val);
-                  api.put('/system/rules', parsed)
-                    .then(() => toast.success('Rules updated'))
-                    .catch((err) => toast.error(err.response?.data?.message || 'Error updating'));
-                } catch (e) {
-                  toast.error('Invalid JSON');
-                }
-              }}
-            >
-              Update Bid Rules
+              Update Category Base Prices
             </Button>
           </div>
         </CardContent>
