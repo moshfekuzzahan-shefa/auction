@@ -2,7 +2,14 @@ import axios from 'axios';
 import { store } from '../store/store';
 import { logout, setCredentials } from '../store/authSlice';
 
-const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+const getApiBase = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) return '/api';
+  const cleanUrl = envUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+  return `${cleanUrl}/api`;
+};
+
+const API_BASE = getApiBase();
 
 // Create a generic axios instance
 const api = axios.create({
