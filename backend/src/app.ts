@@ -7,12 +7,13 @@ import { errorHandler } from './middleware/error.middleware';
 import routes from './modules';
 
 import hpp from 'hpp';
-import csurf from 'csurf';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
-
 const app = express();
+
+// Trust reverse proxy (Render / Vercel) for rate-limiting & IP forwarding
+app.set('trust proxy', 1);
 
 const isOriginAllowed = (origin: string | undefined): boolean => {
   if (!origin) return true; // Allow requests with no origin (mobile apps, Postman, curl)
@@ -46,6 +47,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 app.use(express.json({ limit: '10kb' })); // Body limit for security
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
@@ -53,42 +55,17 @@ app.use(cookieParser());
 // Prevent parameter pollution
 app.use(hpp());
 
-// CSRF Protection (Double Submit Cookie)
-const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'none', secure: true } });
-
-// Provide CSRF token route
-app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  res.status(200).json({ csrfToken: req.csrfToken() });
-});
-
-// Paths that do not require CSRF token validation (login, registration, public routes)
-const csrfExcludedPaths = [
-  '/auth/login',
-  '/auth/register',
-  '/player/register',
-  '/csrf-token'
-];
-
-// Apply CSRF protection ONLY to state-modifying requests (POST, PUT, PATCH, DELETE) except auth/public
-app.use('/api', (req, res, next) => {
-  const isExcluded = csrfExcludedPaths.some(path => req.path.includes(path));
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !isExcluded) {
-    return csrfProtection(req, res, next);
-  }
-  next();
-});
-
 import RedisStore from 'rate-limit-redis';
 import { createClient } from 'redis';
 
-// Note: Redis client should ideally be imported from a central config
+// Redis client setup
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
 redisClient.connect().catch(console.error);
 
-// Rate limiting setup with Redis
+// Rate limiting setup with Redis & Trust Proxy
 const limiter = rateLimit({
   store: new RedisStore({
     sendCommand: (...args: string[]) => redisClient.sendCommand(args),
