@@ -2,9 +2,11 @@ import axios from 'axios';
 import { store } from '../store/store';
 import { logout, setCredentials } from '../store/authSlice';
 
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+
 // Create a generic axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   withCredentials: true, // required for httpOnly cookies
 });
 
@@ -13,7 +15,7 @@ let csrfTokenPromise: Promise<string> | null = null;
 
 async function getCsrfToken() {
   if (!csrfTokenPromise) {
-    csrfTokenPromise = axios.get('/api/csrf-token', { withCredentials: true })
+    csrfTokenPromise = axios.get(`${API_BASE}/csrf-token`, { withCredentials: true })
       .then(res => res.data.csrfToken)
       .catch(err => {
         csrfTokenPromise = null;
@@ -47,7 +49,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       try {
         // Attempt to refresh the token using httpOnly cookies automatically sent
-        const res = await axios.post('/api/auth/refresh-token', {}, { withCredentials: true });
+        const res = await axios.post(`${API_BASE}/auth/refresh-token`, {}, { withCredentials: true });
         
         if (res.data.data.accessToken) {
           // Update Redux state with new access token if needed (handled in slice)
