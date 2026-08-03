@@ -215,9 +215,19 @@ export class PlayerService {
       basePrice = data.basePrice;
     }
 
+    let changeMsg = 'Admin updated your profile details.';
+    if (validCategoryId !== undefined) {
+      const catObj = validCategoryId ? await prisma.playerCategory.findUnique({ where: { id: validCategoryId } }) : null;
+      changeMsg = catObj 
+        ? `Your Category Tier was updated to ${catObj.name} ($${catObj.basePrice})` 
+        : 'Your Category Tier was reset to Unassigned Tier.';
+    }
+
     return prisma.profile.update({
       where: { id: profileId },
       data: {
+        hasUnreadAdminUpdates: true,
+        lastAdminChange: changeMsg,
         ...(validCategoryId !== undefined ? { categoryId: validCategoryId } : {}),
         ...(basePrice !== undefined ? { basePrice } : {}),
         ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
@@ -229,6 +239,15 @@ export class PlayerService {
       include: {
         user: { select: { name: true, email: true } },
         category: true
+      }
+    });
+  }
+
+  static async markAdminUpdatesAsRead(userId: string) {
+    return prisma.profile.update({
+      where: { userId },
+      data: {
+        hasUnreadAdminUpdates: false
       }
     });
   }

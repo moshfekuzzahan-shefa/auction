@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -6,11 +6,13 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { PlayerPitchPosition } from '../../components/ui/PlayerPitchPosition';
-import { Trash2, AlertCircle } from 'lucide-react';
+import { Trash2, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
 import api from '../../services/api';
 
 export const PlayerDashboard = () => {
+  const queryClient = useQueryClient();
+
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['player', 'me'],
     queryFn: async () => {
@@ -29,6 +31,17 @@ export const PlayerDashboard = () => {
     queryFn: async () => {
       const res = await api.get('/system');
       return res.data.data;
+    }
+  });
+
+  const readUpdatesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.patch('/player/read-updates');
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['player', 'me'] });
+      toast.success('Admin updates acknowledged!');
     }
   });
 
@@ -88,11 +101,39 @@ export const PlayerDashboard = () => {
   const isRegistrationPhase = systemState?.currentPhase === 'REGISTRATION';
   const myCategoryTheme = getCategoryTheme(profile.category?.name);
 
+  const AdminUpdateAlert = () => {
+    if (!profile?.hasUnreadAdminUpdates) return null;
+    return (
+      <div className="p-4 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.3)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-6 h-6 text-amber-300 shrink-0" />
+          <div>
+            <span className="font-black text-amber-300 text-xs tracking-wider uppercase block">ADMIN UPDATE NOTIFICATION</span>
+            <p className="text-white text-sm font-bold mt-0.5">
+              {profile.lastAdminChange || 'Your category tier or scouting details were updated by an admin.'}
+            </p>
+          </div>
+        </div>
+        <Button 
+          onClick={() => readUpdatesMutation.mutate()}
+          disabled={readUpdatesMutation.isPending}
+          className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 h-9 rounded-xl text-xs shrink-0 shadow-md"
+        >
+          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+          Mark as Acknowledged
+        </Button>
+      </div>
+    );
+  };
+
   // REGISTRATION PHASE VIEW
   if (isRegistrationPhase) {
     return (
       <div className="max-w-5xl mx-auto p-4 space-y-8">
-        <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
+          <AdminUpdateAlert />
+        </div>
         <Card className={`overflow-hidden border shadow-2xl bg-gradient-to-br ${myCategoryTheme.bgGradient} ${myCategoryTheme.border} ${myCategoryTheme.glow}`}>
           <div className="h-32 relative border-b border-white/10">
             <div className="absolute top-4 right-4">
@@ -182,7 +223,10 @@ export const PlayerDashboard = () => {
   // STANDARD / TOURNAMENT PHASE VIEW
   return (
     <div className="space-y-8 max-w-5xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
+      <div className="space-y-4">
+        <h1 className="text-3xl font-bold text-white">Player Dashboard</h1>
+        <AdminUpdateAlert />
+      </div>
 
       <Card className={`overflow-hidden border shadow-2xl bg-gradient-to-br ${myCategoryTheme.bgGradient} ${myCategoryTheme.border} ${myCategoryTheme.glow}`}>
         <CardHeader className="bg-slate-950/70 border-b border-slate-800">

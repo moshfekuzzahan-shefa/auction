@@ -129,6 +129,16 @@ export class PlayerController {
     }
   }
 
+  static async readAdminUpdates(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) return sendErrorResponse({ res, statusCode: 401, message: 'Unauthorized' });
+      await PlayerService.markAdminUpdatesAsRead(req.user.id);
+      return sendSuccessResponse({ res, message: 'Admin updates acknowledged' });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
   static async getUnsoldPlayers(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       // Typically used by AUCTION phase or SUPER_ADMIN

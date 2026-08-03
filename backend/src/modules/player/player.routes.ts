@@ -22,7 +22,9 @@ const upload = multer({
 
 // Update and Withdraw routes require the user to be an authenticated PLAYER
 // and the system must be in the REGISTRATION phase
-router.get('/me', authenticate, authorize('PLAYER'), PlayerController.getProfile);
+router.get('/me', authenticate, PlayerController.getProfile);
+router.patch('/read-updates', authenticate, PlayerController.readAdminUpdates);
+router.patch('/me/read-updates', authenticate, PlayerController.readAdminUpdates);
 router.use('/update', authenticate, authorize('PLAYER'), requirePhase('REGISTRATION'));
 router.use('/withdraw', authenticate, authorize('PLAYER'), requirePhase('REGISTRATION'));
 

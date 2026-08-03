@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/authSlice';
-import { LogOut, Home, Users, Trophy, Settings, Menu, X } from 'lucide-react';
+import { LogOut, Home, Users, Trophy, Settings, Menu, X, Shield, Calendar } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useState } from 'react';
@@ -33,20 +33,56 @@ export const Sidebar = () => {
           onClick={() => setIsMobileOpen(false)}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-            location.pathname === '/dashboard' ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+            location.pathname === '/dashboard' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
           )}
         >
           <Home className="w-4 h-4" /> Overview
         </Link>
+
+        {user?.role === 'PLAYER' && (
+          <Link 
+            to="/dashboard/my-team" 
+            onClick={() => setIsMobileOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+              location.pathname === '/dashboard/my-team' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+            )}
+          >
+            <Shield className="w-4 h-4 text-emerald-400" /> My Squad
+          </Link>
+        )}
+
+        <Link 
+          to="/dashboard/teams" 
+          onClick={() => setIsMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+            location.pathname === '/dashboard/teams' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+          )}
+        >
+          <Users className="w-4 h-4" /> Franchise Teams
+        </Link>
+
+        <Link 
+          to="/dashboard/schedules" 
+          onClick={() => setIsMobileOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+            location.pathname === '/dashboard/schedules' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+          )}
+        >
+          <Calendar className="w-4 h-4 text-emerald-400" /> Match Schedules
+        </Link>
         
         {user?.role === 'SUPER_ADMIN' && (
           <>
+            <div className="pt-3 pb-1 px-3 text-[10px] font-black uppercase text-slate-500 tracking-wider">Admin Controls</div>
             <Link 
               to="/admin" 
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname === '/admin' ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname === '/admin' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
               <Settings className="w-4 h-4" /> System Config
@@ -56,7 +92,7 @@ export const Sidebar = () => {
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname.startsWith('/admin/players') ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname.startsWith('/admin/players') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
               <Users className="w-4 h-4" /> Players Directory
@@ -66,7 +102,7 @@ export const Sidebar = () => {
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname.startsWith('/auction/admin') ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname.startsWith('/auction/admin') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
               <Trophy className="w-4 h-4" /> Podium Admin
@@ -76,25 +112,26 @@ export const Sidebar = () => {
 
         {user?.role === 'TEAM_MANAGER' && (
           <>
+            <div className="pt-3 pb-1 px-3 text-[10px] font-black uppercase text-slate-500 tracking-wider font-mono">Manager Hub</div>
             <Link 
               to="/team" 
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname.startsWith('/team') ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname.startsWith('/team') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
-              <Users className="w-4 h-4" /> My Squad
+              <Users className="w-4 h-4" /> Manager Roster
             </Link>
             <Link 
               to="/auction" 
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname.startsWith('/auction') ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname.startsWith('/auction') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
-              <Trophy className="w-4 h-4" /> Live Auction
+              <Trophy className="w-4 h-4" /> Live Auction Room
             </Link>
           </>
         )}
@@ -105,10 +142,10 @@ export const Sidebar = () => {
             onClick={() => setIsMobileOpen(false)} 
             className={cn(
               "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-              location.pathname.startsWith('/tournament/admin') ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+              location.pathname.startsWith('/tournament/admin') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
             )}
           >
-            <Trophy className="w-4 h-4" /> Match Engine
+            <Trophy className="w-4 h-4 text-amber-400" /> Match Engine
           </Link>
         )}
       </nav>
@@ -127,7 +164,7 @@ export const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Top Bar (visible only on small screens) */}
+      {/* Mobile Top Bar */}
       <div className="md:hidden h-16 border-b bg-card flex items-center justify-between px-4 shrink-0">
         <Link to="/" className="text-lg font-bold text-primary flex items-center gap-2">
           <div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">U</div>
@@ -151,7 +188,7 @@ export const Sidebar = () => {
         </div>
       )}
 
-      {/* Desktop Sidebar (visible on md+) */}
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 lg:w-72 border-r bg-card flex-col h-full shrink-0">
         <NavContent />
       </aside>

@@ -53,6 +53,9 @@ model Profile {
   soldPrice Int?
   teamId    String?
   team      Team?   @relation(fields: [teamId], references: [id])
+  // Admin change tracking
+  hasUnreadAdminUpdates Boolean @default(false)
+  lastAdminChange       String?
 
   playerEvents MatchEvent[] @relation("PlayerEvent")
   assistEvents MatchEvent[] @relation("AssistEvent")
