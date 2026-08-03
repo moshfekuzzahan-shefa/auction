@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
-import { PlayerPitchPosition } from '../../components/ui/PlayerPitchPosition';
+import { PlayerCard } from '../../components/ui/PlayerCard';
 import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders, Sparkles } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
 import api from '../../services/api';
@@ -218,90 +218,17 @@ export const PlayerListAdminPage = () => {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredPlayers.map((player: any) => {
-            const theme = getCategoryTheme(player.category?.name);
-            return (
-              <Card 
-                key={player.id || player.userId} 
-                className={`transition-all duration-500 group overflow-hidden bg-gradient-to-br ${theme.bgGradient} ${theme.border} ${theme.glow} shadow-lg relative`}
-              >
-                <div className="h-24 relative border-b border-white/10" onClick={() => setSelectedPlayer(player)}>
-                  <PlayerPitchPosition position={player.primaryPos} compact className="absolute top-2 left-2 shadow-sm border-white/40" />
-                  
-                  {/* Category Badge */}
-                  <div className="absolute top-2 right-2">
-                    {player.category ? (
-                      <Badge variant="outline" className={`${theme.badge} font-bold text-xs shadow-sm`}>
-                        {player.category.name} (${player.category.basePrice})
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-slate-800/90 text-slate-300 border-slate-700 font-bold text-[10px]">
-                        Unassigned Tier
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <CardContent className="pt-0 relative px-4 pb-4">
-                  <div 
-                    className={`absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border-4 border-slate-950 bg-slate-950 shadow-xl cursor-pointer ${theme.glow}`}
-                    onClick={() => setSelectedPlayer(player)}
-                  >
-                    <Avatar 
-                      src={player.imageUrl || player.publicId} 
-                      alt={player.user.name} 
-                      fallback={player.user.name.charAt(0)}
-                      size="xl" 
-                      className="w-20 h-20"
-                    />
-                  </div>
-                  <div className="mt-12 text-center space-y-2">
-                    <div onClick={() => setSelectedPlayer(player)} className="cursor-pointer">
-                      <h3 className={`font-black text-lg leading-tight transition-colors ${theme.accentText}`}>
-                        {player.user.name}
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">{player.jerseyName || 'No Jersey'} • ID: {player.studentId}</p>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                      <Badge variant="default" className="text-xs bg-slate-950 text-slate-200 border border-slate-800">{player.primaryPos}</Badge>
-                      {player.isSold && (
-                        <Badge variant="secondary" className="bg-emerald-950 text-emerald-300 border-emerald-800 text-xs">
-                          Sold ({player.team?.name})
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Quick Super Admin Category Tier Selector */}
-                    <div className="pt-3 mt-2 border-t border-slate-800/80 text-left">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                        Category Tier Selector:
-                      </label>
-                      <select 
-                        value={player.categoryId || player.category?.id || ''}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          quickAssignCategoryMutation.mutate({
-                            profileId: player.id || player.userId,
-                            categoryId: e.target.value
-                          });
-                        }}
-                        className="w-full h-9 px-2.5 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
-                      >
-                        <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
-                        {categories.map((cat: any) => (
-                          <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
-                            {cat.name} Tier (${cat.basePrice})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filteredPlayers.map((player: any) => (
+            <PlayerCard
+              key={player.id || player.userId}
+              player={player}
+              categories={categories}
+              onSelectPlayer={setSelectedPlayer}
+              onCategoryChange={(profileId, categoryId) => {
+                quickAssignCategoryMutation.mutate({ profileId, categoryId });
+              }}
+            />
+          ))}
         </div>
       ) : (
         <Card className="bg-slate-900/90 border-slate-800 shadow-xl overflow-hidden">
@@ -351,7 +278,7 @@ export const PlayerListAdminPage = () => {
                               categoryId: e.target.value
                             });
                           }}
-                          className="h-8 px-2 rounded-lg border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
+                          className="h-9 px-3 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500 shadow-inner"
                         >
                           <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
                           {categories.map((cat: any) => (

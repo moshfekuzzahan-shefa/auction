@@ -15,32 +15,32 @@ export const getCategoryTheme = (categoryName?: string): CategoryTheme => {
     return {
       name: 'Platinum',
       bgGradient: 'from-purple-950/60 via-slate-900 to-cyan-950/60',
-      border: 'border-purple-500/50',
-      badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+      border: 'border-purple-400',
+      badge: 'bg-purple-500/20 text-purple-300 border-purple-400/50',
       glow: 'shadow-[0_0_25px_rgba(168,85,247,0.35)]',
       accentText: 'text-purple-300',
-      tagBg: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
+      tagBg: 'bg-purple-500/10 text-purple-300 border-purple-400/30',
     };
   }
 
   if (normalized.includes('gold')) {
     return {
       name: 'Gold',
-      bgGradient: 'from-amber-950/60 via-slate-900 to-yellow-950/60',
-      border: 'border-amber-500/50',
-      badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      bgGradient: 'from-amber-500/20 via-slate-900 to-yellow-500/10',
+      border: 'border-amber-400',
+      badge: 'bg-amber-500/20 text-amber-300 border-amber-400/50',
       glow: 'shadow-[0_0_25px_rgba(245,158,11,0.35)]',
       accentText: 'text-amber-300',
-      tagBg: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+      tagBg: 'bg-amber-500/10 text-amber-300 border-amber-400/30',
     };
   }
 
   if (normalized.includes('silver')) {
     return {
       name: 'Silver',
-      bgGradient: 'from-slate-900 via-slate-800/90 to-slate-900',
-      border: 'border-slate-400/50',
-      badge: 'bg-slate-400/20 text-slate-200 border-slate-400/40',
+      bgGradient: 'from-slate-800/40 via-slate-900 to-slate-800/30',
+      border: 'border-slate-400',
+      badge: 'bg-slate-400/20 text-slate-200 border-slate-400/50',
       glow: 'shadow-[0_0_25px_rgba(148,163,184,0.35)]',
       accentText: 'text-slate-200',
       tagBg: 'bg-slate-400/10 text-slate-200 border-slate-400/30',
@@ -50,23 +50,23 @@ export const getCategoryTheme = (categoryName?: string): CategoryTheme => {
   if (normalized.includes('bronze')) {
     return {
       name: 'Bronze',
-      bgGradient: 'from-amber-950/70 via-slate-900 to-orange-950/70',
-      border: 'border-orange-700/50',
-      badge: 'bg-orange-600/20 text-orange-300 border-orange-600/40',
+      bgGradient: 'from-orange-950/50 via-slate-900 to-amber-950/40',
+      border: 'border-orange-700',
+      badge: 'bg-orange-700/20 text-orange-400 border-orange-700/50',
       glow: 'shadow-[0_0_25px_rgba(194,65,12,0.35)]',
-      accentText: 'text-orange-300',
-      tagBg: 'bg-orange-600/10 text-orange-300 border-orange-600/30',
+      accentText: 'text-orange-400',
+      tagBg: 'bg-orange-700/10 text-orange-400 border-orange-700/30',
     };
   }
 
-  // Fallback / Default theme
+  // Fallback / Default theme (Unassigned)
   return {
     name: categoryName || 'Unassigned',
-    bgGradient: 'from-emerald-950/40 via-slate-900 to-slate-950',
-    border: 'border-emerald-500/30',
-    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    glow: 'shadow-[0_0_25px_rgba(16,185,129,0.25)]',
-    accentText: 'text-emerald-400',
-    tagBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    bgGradient: 'from-slate-900 via-slate-900 to-slate-950',
+    border: 'border-slate-800',
+    badge: 'bg-slate-800/90 text-slate-300 border-slate-700',
+    glow: 'shadow-[0_0_20px_rgba(148,163,184,0.15)]',
+    accentText: 'text-slate-300',
+    tagBg: 'bg-slate-800/50 text-slate-400 border-slate-700',
   };
 };
