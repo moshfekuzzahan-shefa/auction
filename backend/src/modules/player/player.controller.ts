@@ -38,16 +38,40 @@ export class PlayerController {
         categoryId
       };
 
-      const profile = await PlayerService.registerProfile(data, req.file.buffer);
+      const { profile, user, accessToken, refreshToken } = await PlayerService.registerProfile(data, req.file.buffer);
       
+      // Set auth cookies for automatic login
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000 // 15 mins
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
       await AuditService.log({
-        userId: profile.userId,
+        userId: user.id,
         action: 'PLAYER_REGISTERED',
         resource: 'PlayerProfile',
         ipAddress: req.ip
       });
 
-      return sendSuccessResponse({ res, statusCode: 201, message: 'Registration successful', data: profile });
+      return sendSuccessResponse({
+        res,
+        statusCode: 201,
+        message: 'Registration successful',
+        data: {
+          profile,
+          token: accessToken,
+          user
+        }
+      });
     } catch (error: any) {
       return sendErrorResponse({ res, statusCode: 400, message: error.message });
     }

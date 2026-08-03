@@ -25,6 +25,9 @@ const TournamentAdmin = lazy(() => import('./features/tournament/TournamentAdmin
 const DashboardHome = lazy(() => import('./features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
 const PlayerDashboard = lazy(() => import('./features/player/PlayerDashboard').then(m => ({ default: m.PlayerDashboard })));
 
+const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+
 // Removed inline DashboardHome
 
 const PageLoader = () => (
@@ -69,6 +72,8 @@ function App() {
 
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route element={<PhaseProtectedRoute allowedPhases={['REGISTRATION']} />}>
                 <Route path="/register/player" element={<RegistrationPage />} />
               </Route>

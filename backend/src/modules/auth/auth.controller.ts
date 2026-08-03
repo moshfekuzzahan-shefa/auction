@@ -67,4 +67,36 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'Please provide a valid registered email address.' });
+      }
+
+      const result = await AuthService.forgotPassword(email);
+      return sendSuccessResponse({ res, message: result.message, data: result });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
+  static async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, resetToken, newPassword } = req.body;
+      if (!email || !resetToken || !newPassword) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'Email, reset code, and new password are required.' });
+      }
+
+      if (newPassword.length < 6) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'New password must be at least 6 characters long.' });
+      }
+
+      const result = await AuthService.resetPassword(email, resetToken, newPassword);
+      return sendSuccessResponse({ res, message: result.message });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
 }

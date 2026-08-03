@@ -4,31 +4,9 @@ import { authenticate } from '../../middleware/auth.middleware';
 
 const router = Router();
 
-/**
- * @openapi
- * /auth/login:
- *   post:
- *     tags:
- *       - Authentication
- *     summary: Login to the system
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login successful
- *       400:
- *         description: Invalid credentials
- */
 router.post('/login', AuthController.login);
 router.post('/logout', authenticate, AuthController.logout);
+router.post('/forgot-password', AuthController.forgotPassword);
+router.post('/reset-password', AuthController.resetPassword);
 
 export default router;

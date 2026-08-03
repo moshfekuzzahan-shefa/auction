@@ -9,10 +9,13 @@ import {
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { FileUpload } from '../../components/ui/FileUpload';
+import { useAppDispatch } from '../../store/hooks';
+import { setCredentials } from '../../store/authSlice';
 import api from '../../services/api';
 
 export const RegistrationPage = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,9 +44,18 @@ export const RegistrationPage = () => {
       });
       return res.data;
     },
-    onSuccess: () => {
-      toast.success('Registration successful! Please sign in.');
-      navigate('/login');
+    onSuccess: (data) => {
+      const token = data?.data?.token;
+      const user = data?.data?.user;
+
+      if (token && user) {
+        dispatch(setCredentials({ token, user }));
+        toast.success('Registration successful! Welcome to your player dashboard.');
+        navigate('/dashboard');
+      } else {
+        toast.success('Registration successful! Please sign in.');
+        navigate('/login');
+      }
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Registration failed');

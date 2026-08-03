@@ -1,7 +1,7 @@
 import prisma from '../../config/db';
 import { CloudinaryService } from '../../services/cloudinary.service';
-
 import bcrypt from 'bcryptjs';
+import { generateAccessToken, generateRefreshToken } from '../../utils/jwt';
 
 export class PlayerService {
   static async registerProfile(data: any, fileBuffer: Buffer) {
@@ -23,6 +23,14 @@ export class PlayerService {
           }
         });
 
+        const accessToken = generateAccessToken(user.id, user.role);
+        const refreshToken = generateRefreshToken(user.id);
+
+        await tx.user.update({
+          where: { id: user.id },
+          data: { refreshToken }
+        });
+
         const profile = await tx.profile.create({
           data: {
             userId: user.id,
@@ -34,15 +42,22 @@ export class PlayerService {
             categoryId: data.categoryId || null,
             imageUrl: uploadResult.url,
             publicId: uploadResult.publicId,
+          },
+          include: {
+            category: true
           }
         });
 
-        return profile;
+        return {
+          profile,
+          user: { id: user.id, name: user.name, email: user.email, role: user.role },
+          accessToken,
+          refreshToken
+        };
       });
 
       return result;
     } catch (error) {
-      // Cleanup Cloudinary image if DB transaction fails
       if (uploadResult.publicId) {
         await CloudinaryService.deleteImage(uploadResult.publicId);
       }
@@ -58,12 +73,10 @@ export class PlayerService {
     let publicId = profile.publicId;
 
     if (fileBuffer) {
-      // Delete old image using publicId if available, else try parsing url
       if (publicId) {
         await CloudinaryService.deleteImage(publicId);
       }
       
-      // Upload new image
       const uploadResult = await CloudinaryService.uploadImage(fileBuffer, 'football_platform/players');
       imageUrl = uploadResult.url;
       publicId = uploadResult.publicId;
@@ -110,6 +123,21 @@ export class PlayerService {
         assistEvents: true,
       }
     });
+
+    if (!profile) throw new Error('Profile not found.');
+    return profile;
+  }
+
+  static async getMyProfile(userId: string) {
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { name: true, email: true, role: true } },
+        team: { select: { id: true, name: true, logoUrl: true } },
+        category: true
+      }
+    });
+
     if (!profile) throw new Error('Profile not found.');
     return profile;
   }
@@ -125,6 +153,37 @@ export class PlayerService {
     });
   }
 
+  static async getAllPlayers() {
+    return prisma.profile.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+        category: true,
+        team: { select: { name: true } }
+      },
+      orderBy: { user: { createdAt: 'desc' } }
+    });
+  }
+
+  static async getAllProfiles() {
+    return prisma.profile.findMany({
+      include: {
+        user: { select: { name: true, email: true, role: true } },
+        team: { select: { id: true, name: true } },
+        category: true
+      },
+      orderBy: { isSold: 'asc' }
+    });
+  }
+
+  static async getUnassignedProfiles() {
+    return prisma.profile.findMany({
+      where: { categoryId: null },
+      include: {
+        user: { select: { name: true, email: true } }
+      }
+    });
+  }
+
   static async adminUpdateProfile(profileId: string, data: any) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
     if (!profile) throw new Error('Player profile not found.');
@@ -137,10 +196,8 @@ export class PlayerService {
         validCategoryId = null;
         basePrice = null;
       } else {
-        // 1. Try finding category by exact primary key ID
         let category = await prisma.playerCategory.findUnique({ where: { id: data.categoryId } });
         
-        // 2. Fallback: try finding category by name (case-insensitive) if tier name was passed
         if (!category) {
           category = await prisma.playerCategory.findFirst({
             where: { name: { equals: data.categoryId, mode: 'insensitive' } }
@@ -173,17 +230,6 @@ export class PlayerService {
         user: { select: { name: true, email: true } },
         category: true
       }
-    });
-  }
-
-  static async getAllPlayers() {
-    return prisma.profile.findMany({
-      include: {
-        user: { select: { name: true, email: true } },
-        category: true,
-        team: { select: { name: true } }
-      },
-      orderBy: { user: { createdAt: 'desc' } }
     });
   }
 }
