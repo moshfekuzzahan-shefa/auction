@@ -24,6 +24,9 @@ export const setupSockets = (httpServer: HttpServer) => {
   const pubClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
   const subClient = pubClient.duplicate();
 
+  pubClient.on('error', (err) => logger.error('Socket Redis Pub Error', err));
+  subClient.on('error', (err) => logger.error('Socket Redis Sub Error', err));
+
   Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
     io.adapter(createAdapter(pubClient, subClient));
     logger.info('Socket.IO Redis adapter connected');
