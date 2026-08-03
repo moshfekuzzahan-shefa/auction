@@ -15,18 +15,22 @@ setupSockets(server);
 
 // Start Server
 server.listen(PORT, '0.0.0.0', async () => {
-  await seedSuperAdmin();
+  try {
+    await seedSuperAdmin();
+  } catch (err) {
+    if (logger) logger.error('Initial database seeding warning:', err);
+  }
   logger.info(`Server is running on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
+// Handle unhandled promise rejections gracefully without crashing
 process.on('unhandledRejection', (err: any) => {
   console.error('UNHANDLED REJECTION:', err);
   if (logger) logger.error(`Unhandled Rejection: ${err?.message || err}`);
-  server.close(() => process.exit(1));
 });
 
+// Handle uncaught exceptions gracefully
 process.on('uncaughtException', (err: any) => {
   console.error('UNCAUGHT EXCEPTION:', err);
-  process.exit(1);
+  if (logger) logger.error(`Uncaught Exception: ${err?.message || err}`);
 });
