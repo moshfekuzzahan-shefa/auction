@@ -25,12 +25,18 @@ async function getCsrfToken() {
   return csrfTokenPromise;
 }
 
-// Request Interceptor to append CSRF token
+// Request Interceptor to append Authorization header and CSRF token
 api.interceptors.request.use(async (config) => {
+  const state = store.getState();
+  const token = state.auth.token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
     try {
-      const token = await getCsrfToken();
-      config.headers['CSRF-Token'] = token;
+      const csrfToken = await getCsrfToken();
+      config.headers['CSRF-Token'] = csrfToken;
     } catch (error) {
       console.error('Failed to fetch CSRF token:', error);
     }
