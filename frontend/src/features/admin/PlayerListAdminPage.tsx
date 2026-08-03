@@ -9,6 +9,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { PlayerPitchPosition } from '../../components/ui/PlayerPitchPosition';
 import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders } from 'lucide-react';
+import { getCategoryTheme } from '../../utils/categoryTheme';
 import api from '../../services/api';
 
 export const PlayerListAdminPage = () => {
@@ -71,7 +72,7 @@ export const PlayerListAdminPage = () => {
       });
       return res.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Player scouting details & category updated!');
       queryClient.invalidateQueries({ queryKey: ['players', 'all'] });
       if (selectedPlayer) {
@@ -112,6 +113,8 @@ export const PlayerListAdminPage = () => {
       </div>
     );
   }
+
+  const selectedPlayerTheme = getCategoryTheme(selectedPlayer?.category?.name);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4">
@@ -161,61 +164,64 @@ export const PlayerListAdminPage = () => {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredPlayers.map((player: any) => (
-            <Card 
-              key={player.id || player.userId} 
-              className="cursor-pointer hover:border-emerald-500/50 hover:shadow-lg transition-all group overflow-hidden bg-slate-900/90 border-slate-800"
-              onClick={() => setSelectedPlayer(player)}
-            >
-              <div className="h-24 bg-gradient-to-r from-slate-950 to-slate-900 relative border-b border-slate-800">
-                <PlayerPitchPosition position={player.primaryPos} compact className="absolute top-2 left-2 shadow-sm border-white/40" />
-                
-                {/* Category Badge */}
-                {player.category ? (
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-bold text-xs">
-                      {player.category.name} (${player.category.basePrice})
-                    </Badge>
-                  </div>
-                ) : (
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="destructive" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
-                      Pending Category
-                    </Badge>
-                  </div>
-                )}
-              </div>
-
-              <CardContent className="pt-0 relative px-4 pb-4">
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border-4 border-slate-900 bg-slate-950 shadow-md">
-                  <Avatar 
-                    src={player.imageUrl || player.publicId} 
-                    alt={player.user.name} 
-                    fallback={player.user.name.charAt(0)}
-                    size="xl" 
-                    className="w-20 h-20"
-                  />
-                </div>
-                <div className="mt-12 text-center space-y-2">
-                  <div>
-                    <h3 className="font-bold text-lg text-white leading-tight group-hover:text-emerald-400 transition-colors">
-                      {player.user.name}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{player.jerseyName || 'No Jersey'} • {player.studentId}</p>
-                  </div>
+          {filteredPlayers.map((player: any) => {
+            const theme = getCategoryTheme(player.category?.name);
+            return (
+              <Card 
+                key={player.id || player.userId} 
+                className={`cursor-pointer hover:scale-[1.02] transition-all duration-300 group overflow-hidden bg-gradient-to-br ${theme.bgGradient} ${theme.border} ${theme.glow} shadow-md`}
+                onClick={() => setSelectedPlayer(player)}
+              >
+                <div className="h-24 relative border-b border-white/10">
+                  <PlayerPitchPosition position={player.primaryPos} compact className="absolute top-2 left-2 shadow-sm border-white/40" />
                   
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                    <Badge variant="default" className="text-xs bg-slate-800 text-slate-200">{player.primaryPos}</Badge>
-                    {player.isSold && (
-                      <Badge variant="secondary" className="bg-emerald-950 text-emerald-300 border-emerald-800 text-xs">
-                        Sold ({player.team?.name})
+                  {/* Category Badge */}
+                  {player.category ? (
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="outline" className={`${theme.badge} font-bold text-xs shadow-sm`}>
+                        {player.category.name} (${player.category.basePrice})
                       </Badge>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="absolute top-2 right-2">
+                      <Badge variant="destructive" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
+                        Pending Category
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <CardContent className="pt-0 relative px-4 pb-4">
+                  <div className={`absolute -top-12 left-1/2 -translate-x-1/2 rounded-full border-4 border-slate-950 bg-slate-950 shadow-xl ${theme.glow}`}>
+                    <Avatar 
+                      src={player.imageUrl || player.publicId} 
+                      alt={player.user.name} 
+                      fallback={player.user.name.charAt(0)}
+                      size="xl" 
+                      className="w-20 h-20"
+                    />
+                  </div>
+                  <div className="mt-12 text-center space-y-2">
+                    <div>
+                      <h3 className={`font-bold text-lg leading-tight transition-colors ${theme.accentText}`}>
+                        {player.user.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">{player.jerseyName || 'No Jersey'} • {player.studentId}</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <Badge variant="default" className="text-xs bg-slate-950 text-slate-200 border border-slate-800">{player.primaryPos}</Badge>
+                      {player.isSold && (
+                        <Badge variant="secondary" className="bg-emerald-950 text-emerald-300 border-emerald-800 text-xs">
+                          Sold ({player.team?.name})
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card className="bg-slate-900/90 border-slate-800">
@@ -233,53 +239,56 @@ export const PlayerListAdminPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {filteredPlayers.map((player: any) => (
-                  <tr 
-                    key={player.id || player.userId} 
-                    className="hover:bg-slate-800/40 transition-colors cursor-pointer"
-                    onClick={() => setSelectedPlayer(player)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar 
-                          src={player.imageUrl || player.publicId} 
-                          alt={player.user.name} 
-                          fallback={player.user.name.charAt(0)}
-                        />
-                        <div>
-                          <div className="font-bold text-white">{player.user.name}</div>
-                          <div className="text-xs text-slate-400">{player.jerseyName || 'No Jersey'}</div>
+                {filteredPlayers.map((player: any) => {
+                  const theme = getCategoryTheme(player.category?.name);
+                  return (
+                    <tr 
+                      key={player.id || player.userId} 
+                      className="hover:bg-slate-800/40 transition-colors cursor-pointer"
+                      onClick={() => setSelectedPlayer(player)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar 
+                            src={player.imageUrl || player.publicId} 
+                            alt={player.user.name} 
+                            fallback={player.user.name.charAt(0)}
+                          />
+                          <div>
+                            <div className={`font-bold ${theme.accentText}`}>{player.user.name}</div>
+                            <div className="text-xs text-slate-400">{player.jerseyName || 'No Jersey'}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">{player.user.email}</td>
-                    <td className="px-4 py-3 text-slate-400">{player.studentId || '-'}</td>
-                    <td className="px-4 py-3 font-medium text-emerald-400">{player.primaryPos}</td>
-                    <td className="px-4 py-3">
-                      {player.category ? (
-                        <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold border border-emerald-500/20">
-                          {player.category.name}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-full text-xs font-semibold border border-amber-500/20">
-                          Pending Assignment
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-white">${player.category?.basePrice || '-'}</td>
-                    <td className="px-4 py-3">
-                      {player.isSold ? (
-                        <span className="px-2 py-1 bg-emerald-950 text-emerald-300 rounded-md text-xs font-bold border border-emerald-800">
-                          Sold ({player.team?.name})
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold">
-                          Unsold
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{player.user.email}</td>
+                      <td className="px-4 py-3 text-slate-400">{player.studentId || '-'}</td>
+                      <td className="px-4 py-3 font-medium text-emerald-400">{player.primaryPos}</td>
+                      <td className="px-4 py-3">
+                        {player.category ? (
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${theme.badge}`}>
+                            {player.category.name}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-full text-xs font-semibold border border-amber-500/20">
+                            Pending Assignment
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-white">${player.category?.basePrice || '-'}</td>
+                      <td className="px-4 py-3">
+                        {player.isSold ? (
+                          <span className="px-2 py-1 bg-emerald-950 text-emerald-300 rounded-md text-xs font-bold border border-emerald-800">
+                            Sold ({player.team?.name})
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded-md text-xs font-semibold">
+                            Unsold
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -293,8 +302,8 @@ export const PlayerListAdminPage = () => {
             <div className="flex flex-col">
               
               {/* Header Banner */}
-              <div className="h-32 bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 relative border-b border-slate-800">
-                <div className="absolute -bottom-14 left-6 rounded-full border-4 border-slate-900 bg-slate-950 shadow-xl">
+              <div className={`h-32 bg-gradient-to-r ${selectedPlayerTheme.bgGradient} relative border-b ${selectedPlayerTheme.border}`}>
+                <div className={`absolute -bottom-14 left-6 rounded-full border-4 border-slate-900 bg-slate-950 shadow-xl ${selectedPlayerTheme.glow}`}>
                   <Avatar 
                     src={selectedPlayer.imageUrl || selectedPlayer.publicId} 
                     alt={selectedPlayer.user.name} 
@@ -304,7 +313,7 @@ export const PlayerListAdminPage = () => {
                 </div>
                 <div className="absolute top-4 right-4 flex gap-2">
                   {selectedPlayer.category ? (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 px-3 py-1 font-bold">
+                    <Badge variant="outline" className={`${selectedPlayerTheme.badge} px-3 py-1 font-bold shadow-sm`}>
                       {selectedPlayer.category.name} Tier (${selectedPlayer.category.basePrice})
                     </Badge>
                   ) : (

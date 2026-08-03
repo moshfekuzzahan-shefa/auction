@@ -3,8 +3,9 @@ import { useSocketContext } from '../../providers/SocketProvider';
 import { useAppSelector } from '../../store/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Trophy, ShieldAlert, ArrowUpRight, CheckCircle2, UserCheck } from 'lucide-react';
+import { Trophy, ShieldAlert, ArrowUpRight, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { getCategoryTheme } from '../../utils/categoryTheme';
 
 export const LiveAuction = () => {
   const { socket } = useSocketContext();
@@ -63,7 +64,6 @@ export const LiveAuction = () => {
   // Calculated values from backend
   const currentBid = auctionState.currentBid || 0;
   const nextValidBid = auctionState.nextValidBid || currentBid;
-  const minimumRaise = auctionState.minimumRaise || 0;
   const minRosterNeeded = auctionState.minRoster || 11;
   const lowestBasePrice = auctionState.lowestBasePrice || 250;
 
@@ -76,6 +76,8 @@ export const LiveAuction = () => {
   const remainingSlotsAfterThisPlayer = Math.max(0, minRosterNeeded - (currentBoughtCount + 1));
   const reserveNeeded = remainingSlotsAfterThisPlayer * lowestBasePrice;
   const maxAllowableBid = Math.max(0, remainingBudget - reserveNeeded);
+
+  const activeCategoryTheme = getCategoryTheme(auctionState.currentPlayer?.category?.name);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 p-4">
@@ -93,7 +95,7 @@ export const LiveAuction = () => {
         <div className="flex items-center space-x-4">
           <div className="text-center">
             <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">Timer</span>
-            <div className="text-3xl font-mono font-black text-emerald-400 bg-slate-950 px-4 py-1.5 rounded-xl border border-slate-800">
+            <div className="text-3xl font-mono font-black text-emerald-400 bg-slate-950 px-4 py-1.5 rounded-xl border border-slate-800 shadow-inner">
               00:{auctionState.timer?.toString().padStart(2, '0') || '00'}
             </div>
           </div>
@@ -102,13 +104,13 @@ export const LiveAuction = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Player Podium Card (7 cols) */}
-        <Card className="lg:col-span-7 bg-slate-900/90 border-slate-800 shadow-xl overflow-hidden">
-          <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+        {/* Left Column: Player Podium Card with Dynamic Category Theme (7 cols) */}
+        <Card className={`lg:col-span-7 shadow-2xl overflow-hidden transition-all duration-500 bg-gradient-to-br ${activeCategoryTheme.bgGradient} ${activeCategoryTheme.border} ${activeCategoryTheme.glow}`}>
+          <CardHeader className="bg-slate-950/70 border-b border-slate-800">
             <CardTitle className="text-lg font-bold text-white flex items-center justify-between">
               <span>On The Podium</span>
               {auctionState.currentPlayer?.category && (
-                <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">
+                <span className={`px-3 py-1 font-bold text-xs rounded-full border shadow-sm ${activeCategoryTheme.badge}`}>
                   {auctionState.currentPlayer.category.name} Tier
                 </span>
               )}
@@ -117,7 +119,7 @@ export const LiveAuction = () => {
           <CardContent className="p-6">
             {auctionState.currentPlayer ? (
               <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-40 h-40 md:w-48 md:h-48 bg-slate-950 rounded-2xl overflow-hidden border-2 border-emerald-500/30 shadow-2xl shrink-0 flex items-center justify-center">
+                <div className={`w-40 h-40 md:w-48 md:h-48 bg-slate-950 rounded-2xl overflow-hidden border-2 ${activeCategoryTheme.border} ${activeCategoryTheme.glow} shadow-2xl shrink-0 flex items-center justify-center`}>
                   {auctionState.currentPlayer.publicId ? (
                     <img src={auctionState.currentPlayer.publicId} alt={auctionState.currentPlayer.user?.name} className="w-full h-full object-cover" />
                   ) : (
@@ -133,7 +135,7 @@ export const LiveAuction = () => {
                   </div>
                   
                   <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                    <span className="px-3 py-1 bg-slate-950 border border-slate-800 text-emerald-300 font-bold text-xs rounded-lg">
+                    <span className={`px-3 py-1 font-bold text-xs rounded-lg border ${activeCategoryTheme.tagBg}`}>
                       Jersey: {auctionState.currentPlayer.jerseyName || 'N/A'}
                     </span>
                     <span className="px-3 py-1 bg-slate-950 border border-slate-800 text-teal-300 font-bold text-xs rounded-lg">
@@ -141,9 +143,11 @@ export const LiveAuction = () => {
                     </span>
                   </div>
 
-                  <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-300">
+                  <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 text-xs text-slate-300">
                     <span className="text-slate-400 font-semibold">Category Base Price: </span>
-                    <span className="font-extrabold text-emerald-400">${auctionState.currentPlayer.category?.basePrice || auctionState.currentPlayer.basePrice}</span>
+                    <span className={`font-extrabold ${activeCategoryTheme.accentText}`}>
+                      ${auctionState.currentPlayer.category?.basePrice || auctionState.currentPlayer.basePrice}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -196,7 +200,7 @@ export const LiveAuction = () => {
                   {nextValidBid > maxAllowableBid && (
                     <div className="p-3 bg-red-950/40 border border-red-800/40 text-red-300 text-xs font-semibold rounded-xl flex items-center space-x-2 text-left">
                       <ShieldAlert className="w-4 h-4 shrink-0 text-red-400" />
-                      <span>Bid exceeds your Max Allowable Bid ($${maxAllowableBid.toLocaleString()})!</span>
+                      <span>Bid exceeds your Max Allowable Bid (${maxAllowableBid.toLocaleString()})!</span>
                     </div>
                   )}
                 </div>
