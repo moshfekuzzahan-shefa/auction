@@ -63,7 +63,7 @@ export const PlayerCard = ({
 
   const theme = getCardTheme(player.category?.name);
   const jerseyNum = player.jerseyName || (player.studentId ? player.studentId.slice(-2) : '10');
-  const rawPhotoUrl = player.imageUrl || player.publicId;
+  const rawPhotoUrl = player.imageUrl || player.publicId || player.avatarUrl || player.user?.avatarUrl;
 
   const handleCardClick = () => {
     if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
@@ -99,15 +99,18 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect (Matches Watermark Bounds) */}
+      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect (Matches Watermark Bounds Exactly 210px) */}
       <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2 bg-transparent">
-        <div className="w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden border-2 border-white/25 shadow-2xl ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/70 relative">
+        <div className="w-[210px] h-[210px] sm:w-[210px] sm:h-[210px] rounded-full overflow-hidden border-2 border-white/25 shadow-2xl ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/70 relative">
           {rawPhotoUrl ? (
             <img 
               src={rawPhotoUrl} 
-              alt={player.user?.name} 
+              alt={player.user?.name || 'Player Avatar'} 
               className="w-full h-full object-cover object-center scale-110 transition-transform duration-500 group-hover:scale-125"
               loading="lazy"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
             />
           ) : (
             <svg className="w-32 h-32 text-slate-700 fill-current mt-6" viewBox="0 0 24 24">
