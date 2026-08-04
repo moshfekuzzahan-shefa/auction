@@ -1,7 +1,14 @@
-import { forwardRef, useEffect, useRef } from 'react';
+import React, { createContext, useContext, forwardRef, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
 import { X } from 'lucide-react';
+
+interface DialogContextType {
+  open: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+const DialogContext = createContext<DialogContextType>({ open: false });
 
 interface DialogProps extends React.HTMLAttributes<HTMLDivElement> {
   open?: boolean;
@@ -9,13 +16,21 @@ interface DialogProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const Dialog = ({ open, children }: DialogProps) => {
+export const Dialog = ({ open = false, onOpenChange, children }: DialogProps) => {
   if (!open) return null;
-  return <>{children}</>;
+  return (
+    <DialogContext.Provider value={{ open, onOpenChange }}>
+      {children}
+    </DialogContext.Provider>
+  );
 };
 
 export const DialogContent = forwardRef<HTMLDivElement, DialogProps>(
-  ({ className, children, open, onOpenChange, ...props }, ref) => {
+  ({ className, children, open: explicitOpen, onOpenChange: explicitOnOpenChange, ...props }, ref) => {
+    const ctx = useContext(DialogContext);
+    const isOpen = explicitOpen !== undefined ? explicitOpen : ctx.open;
+    const handleOpenChange = explicitOnOpenChange || ctx.onOpenChange;
+
     const internalRef = useRef<HTMLDivElement>(null);
     const combinedRef = (node: HTMLDivElement) => {
       internalRef.current = node;
@@ -25,9 +40,9 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogProps>(
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && onOpenChange) onOpenChange(false);
+        if (e.key === 'Escape' && handleOpenChange) handleOpenChange(false);
       };
-      if (open) {
+      if (isOpen) {
         document.body.style.overflow = 'hidden';
         document.addEventListener('keydown', handleKeyDown);
       }
@@ -35,30 +50,30 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogProps>(
         document.body.style.overflow = 'unset';
         document.removeEventListener('keydown', handleKeyDown);
       };
-    }, [open, onOpenChange]);
+    }, [isOpen, handleOpenChange]);
 
-    if (!open) return null;
+    if (!isOpen) return null;
 
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-all duration-100 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in"
-          onClick={() => onOpenChange?.(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-all duration-100"
+          onClick={() => handleOpenChange?.(false)}
         />
         <div
           ref={combinedRef}
           className={cn(
-            "fixed z-50 grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg sm:rounded-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:max-w-[425px]",
+            "relative z-50 grid w-full max-w-lg gap-4 border border-slate-800 bg-slate-900 p-6 shadow-2xl rounded-2xl duration-200",
             className
           )}
           {...props}
         >
           {children}
           <button
-            onClick={() => onOpenChange?.(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            onClick={() => handleOpenChange?.(false)}
+            className="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </button>
         </div>
