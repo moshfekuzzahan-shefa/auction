@@ -166,15 +166,20 @@ export class AuctionEngine {
 
   // --- Real-Time Bidding ---
 
-  public placeBid(teamId: string, amount: number) {
-    if (this.status !== 'ACTIVE') return;
+  public placeBid(teamId: string, amount: number, senderSocket?: Socket) {
+    if (this.status !== 'ACTIVE') {
+      if (senderSocket) senderSocket.emit('ERROR', 'Auction is not active!');
+      return;
+    }
 
     this.enqueue(async () => {
       if (this.mode === 'NORMAL') {
         const { nextValidBid } = await this.calculateNextBid();
 
         if (this.currentLeaderId && amount < nextValidBid) {
-          this.io.to(`team_${teamId}`).emit('ERROR', `Bid increment too low. Next valid bid (+10%) must be at least $${nextValidBid}`);
+          const errMsg = `Bid increment too low. Next valid bid must be at least $${nextValidBid.toLocaleString()}`;
+          if (senderSocket) senderSocket.emit('ERROR', errMsg);
+          this.io.to(`team_${teamId}`).emit('ERROR', errMsg);
           return;
         }
 
@@ -182,6 +187,7 @@ export class AuctionEngine {
         await prisma.$transaction(async (tx) => {
           const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
           if (!isValid) {
+            if (senderSocket) senderSocket.emit('ERROR', error);
             this.io.to(`team_${teamId}`).emit('ERROR', error);
             return;
           }
@@ -201,10 +207,12 @@ export class AuctionEngine {
         await prisma.$transaction(async (tx) => {
           const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
           if (!isValid) {
-             this.io.to(`team_${teamId}`).emit('ERROR', error);
-             return;
+            if (senderSocket) senderSocket.emit('ERROR', error);
+            this.io.to(`team_${teamId}`).emit('ERROR', error);
+            return;
           }
           this.blindBids.set(teamId, amount);
+          if (senderSocket) senderSocket.emit('SUCCESS', 'Blind bid registered');
           this.io.to(`team_${teamId}`).emit('SUCCESS', 'Blind bid registered');
         });
       }

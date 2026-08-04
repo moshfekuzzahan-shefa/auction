@@ -255,7 +255,7 @@ export const AuctionPodium = ({
             </div>
 
             {/* Bidding Action Button for Managers */}
-            {!isReadOnly && userRole === 'TEAM_MANAGER' && status === 'ACTIVE' && onPlaceBid && (
+            {!isReadOnly && status === 'ACTIVE' && onPlaceBid && (myTeam || userRole === 'TEAM_MANAGER' || userRole === 'SUPER_ADMIN' || userRole === 'PODIUM_ADMIN') && (
               <div className="pt-2">
                 <Button 
                   size="lg"

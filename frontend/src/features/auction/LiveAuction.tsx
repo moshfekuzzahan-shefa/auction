@@ -43,7 +43,7 @@ export const LiveAuction = () => {
 
   const placeBid = (amount: number) => {
     if (socket) {
-      socket.emit('PLACE_BID', { amount });
+      socket.emit('PLACE_BID', { amount, teamId: myTeam?.id });
     }
   };
 
