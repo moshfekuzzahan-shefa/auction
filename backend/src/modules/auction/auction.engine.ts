@@ -37,17 +37,26 @@ export class AuctionEngine {
   public async startAuction(playerId: string, mode: AuctionMode = 'NORMAL', basePriceOverride?: number, timerSeconds: number = 30) {
     if (this.status !== 'IDLE') throw new Error('Auction already active');
     
-    // Fetch player profile & category basePrice
-    const player = await prisma.profile.findUnique({
-      where: { userId: playerId },
+    // Fetch player profile & category basePrice cleanly supporting both userId and profile id
+    const player = await prisma.profile.findFirst({
+      where: {
+        OR: [
+          { userId: playerId },
+          { id: playerId }
+        ]
+      },
       include: { category: true }
     });
 
-    const calculatedBasePrice = basePriceOverride || player?.basePrice || player?.category?.basePrice || 500;
+    if (!player) {
+      throw new Error('Player profile not found for podium auction');
+    }
+
+    const calculatedBasePrice = basePriceOverride || player.basePrice || player.category?.basePrice || 500;
 
     this.status = 'ACTIVE';
     this.mode = mode;
-    this.currentPlayerId = playerId;
+    this.currentPlayerId = player.userId;
     this.currentBid = calculatedBasePrice;
     this.currentLeaderId = null;
     this.timer = timerSeconds;
