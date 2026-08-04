@@ -29,13 +29,18 @@ export class PublicService {
         logoUrl: true,
         budget: true,
         managerId: true,
+        manager: { select: { id: true, name: true, email: true } },
         _count: { select: { players: true } },
         players: {
           select: {
             id: true,
+            imageUrl: true,
             primaryPos: true,
-            user: { select: { name: true } },
-            category: { select: { name: true } }
+            secondaryPos: true,
+            soldPrice: true,
+            basePrice: true,
+            user: { select: { id: true, name: true, email: true } },
+            category: { select: { id: true, name: true, basePrice: true } }
           }
         }
       },

@@ -122,6 +122,11 @@ export const PlayerTeamsDirectoryPage = () => {
                       })}
                     </div>
                   )}
+
+                  <div className="pt-2 flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                    <span>View Roster & Player Profiles</span>
+                    <span>→</span>
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -129,48 +134,97 @@ export const PlayerTeamsDirectoryPage = () => {
         </div>
       )}
 
-      {/* Team Details Modal */}
+      {/* Team Details Modal with Player Profile List */}
       <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
-        <DialogContent className="sm:max-w-2xl bg-slate-900 border-slate-800 text-white shadow-2xl p-6">
+        <DialogContent className="sm:max-w-3xl bg-slate-900 border-slate-800 text-white shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
           {selectedTeam && (
             <div className="space-y-6">
-              <div className="flex items-center gap-4 pb-4 border-b border-slate-800">
-                <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center shrink-0">
-                  {selectedTeam.logoUrl ? (
-                    <img src={selectedTeam.logoUrl} alt={selectedTeam.name} className="w-full h-full object-contain" />
-                  ) : (
-                    <Shield className="w-8 h-8 text-emerald-400" />
-                  )}
+              {/* Header section */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center shrink-0">
+                    {selectedTeam.logoUrl ? (
+                      <img src={selectedTeam.logoUrl} alt={selectedTeam.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <Shield className="w-8 h-8 text-emerald-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">{selectedTeam.name}</h2>
+                    {selectedTeam.manager?.name && (
+                      <p className="text-slate-400 text-xs font-semibold">
+                        Manager: <span className="text-slate-200">{selectedTeam.manager.name}</span> {selectedTeam.manager.email && `(${selectedTeam.manager.email})`}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black text-white">{selectedTeam.name}</h2>
-                  <p className="text-slate-400 text-xs font-semibold">Available Budget: ${selectedTeam.budget}</p>
+
+                <div className="flex sm:flex-col items-end justify-between w-full sm:w-auto gap-1 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Purse Remaining</span>
+                  <span className="font-mono font-black text-emerald-400 text-lg">${(selectedTeam.budget || 0).toLocaleString()}</span>
                 </div>
               </div>
 
+              {/* Roster Players List */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-400" />
-                  <span>Drafted Roster ({selectedTeam.players?.length || 0})</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span>Team Player Roster ({selectedTeam.players?.length || 0})</span>
+                  </h3>
+                  <Badge className="bg-slate-950 text-slate-300 border border-slate-800 font-mono text-xs">
+                    {selectedTeam.players?.length || 0} Drafted
+                  </Badge>
+                </div>
 
                 {!selectedTeam.players || selectedTeam.players.length === 0 ? (
-                  <p className="text-slate-400 text-sm py-4">No players drafted to this roster yet.</p>
+                  <div className="p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-slate-400 text-sm">
+                    No players assigned or drafted to this team roster yet.
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
                     {selectedTeam.players.map((p: any) => {
                       const theme = getCategoryTheme(p.category?.name);
+                      const playerName = p.user?.name || p.name || 'Player';
+                      const avatarUrl = p.imageUrl || '/default-avatar.png';
+                      const pos = p.primaryPos || 'CM';
+                      const secondaries = Array.isArray(p.secondaryPos) ? p.secondaryPos.join(', ') : p.secondaryPos;
+                      const price = p.soldPrice || p.basePrice || 0;
+
                       return (
-                        <div key={p.id} className={`p-3 rounded-xl border bg-slate-950 flex items-center justify-between ${theme.border}`}>
-                          <div>
-                            <p className="font-bold text-sm text-white">{p.user?.name || p.name || 'Player'}</p>
-                            <p className="text-xs text-slate-400">Position: {p.primaryPos || 'CM'}</p>
+                        <div 
+                          key={p.id} 
+                          className={`p-3.5 rounded-xl border bg-slate-950 flex items-center justify-between gap-3 shadow-md hover:border-slate-700 transition-all ${theme.border}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700/80 bg-zinc-800 shrink-0 flex items-center justify-center">
+                              <img 
+                                src={avatarUrl} 
+                                alt={playerName} 
+                                className="w-full h-full object-cover scale-110" 
+                                onError={(e) => { (e.target as HTMLElement).setAttribute('src', '/default-avatar.png'); }}
+                              />
+                            </div>
+
+                            <div className="space-y-0.5">
+                              <p className="font-bold text-sm text-white">{playerName}</p>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                <span className="font-bold text-emerald-400">{pos}</span>
+                                {secondaries && <span className="text-[10px] text-slate-500">({secondaries})</span>}
+                              </div>
+                            </div>
                           </div>
-                          {p.category && (
-                            <Badge variant="outline" className={`${theme.badge} text-[10px] font-bold px-2 py-0.5`}>
-                              {p.category.name}
-                            </Badge>
-                          )}
+
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {p.category && (
+                              <Badge variant="outline" className={`${theme.badge} text-[10px] font-bold px-2 py-0.5`}>
+                                {p.category.name}
+                              </Badge>
+                            )}
+                            {price > 0 && (
+                              <span className="font-mono text-xs font-bold text-emerald-400">${price.toLocaleString()}</span>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
