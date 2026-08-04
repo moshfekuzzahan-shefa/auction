@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
 import { Card } from './Card';
 import { Badge } from './Badge';
-import { Trophy, Crown, GraduationCap, Loader2 } from 'lucide-react';
-import { getPlayerCutout } from '../../utils/cutoutProcessor';
+import { Trophy, Crown, GraduationCap } from 'lucide-react';
 
 interface PlayerCardProps {
   player: any;
@@ -67,40 +65,6 @@ export const PlayerCard = ({
   const jerseyNum = player.jerseyName || (player.studentId ? player.studentId.slice(-2) : '10');
   const rawPhotoUrl = player.imageUrl || player.publicId;
 
-  // Background Removal Cutout Processing State (Alpha Channel Transparency)
-  const [processedImg, setProcessedImg] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(!!rawPhotoUrl);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (!rawPhotoUrl) {
-      setIsProcessing(false);
-      setProcessedImg(null);
-      return;
-    }
-
-    setIsProcessing(true);
-
-    getPlayerCutout(rawPhotoUrl)
-      .then((transparentImageUrl) => {
-        if (isMounted) {
-          setProcessedImg(transparentImageUrl || rawPhotoUrl);
-          setIsProcessing(false);
-        }
-      })
-      .catch((error) => {
-        console.error("Background removal failed:", error);
-        if (isMounted) {
-          setProcessedImg(rawPhotoUrl);
-          setIsProcessing(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [rawPhotoUrl]);
-
   const handleCardClick = () => {
     if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
       onTogglePodiumAdmin(player);
@@ -135,28 +99,17 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Transparent PNG Cutout (Alpha Channel Overlaying Card Gradient) */}
+      {/* LAYER 3: Instant Player Image Container (Zero Lag, Zero CPU Spike) */}
       <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2 bg-transparent">
-        {isProcessing ? (
-          /* Loading Skeletal Shimmer & Spinner */
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="w-40 h-52 bg-slate-900/40 rounded-t-full border border-white/10 animate-pulse flex items-center justify-center shadow-xl backdrop-blur-sm">
-              <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-            </div>
-            <span className="text-[10px] font-bold text-emerald-300 tracking-widest uppercase animate-pulse drop-shadow">Removing Background...</span>
+        {rawPhotoUrl ? (
+          <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-white/20 ring-4 ring-slate-950/80 shadow-2xl relative mb-4">
+            <img 
+              src={rawPhotoUrl} 
+              alt={player.user?.name} 
+              className="w-full h-full object-cover object-center"
+              loading="lazy"
+            />
           </div>
-        ) : processedImg ? (
-          /* Transparent PNG Cutout Overlaying Dynamic Card Gradient */
-          <img 
-            src={processedImg} 
-            alt={player.user?.name} 
-            className="w-52 h-60 object-contain object-bottom scale-110 -translate-y-2 group-hover:scale-115 transition-transform duration-500 bg-transparent drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
-            onError={() => {
-              if (processedImg !== rawPhotoUrl) {
-                setProcessedImg(rawPhotoUrl);
-              }
-            }}
-          />
         ) : (
           /* Default Silhouette Placeholder */
           <div className="w-44 h-52 bg-slate-950/80 rounded-t-full border border-white/10 flex items-end justify-center shadow-2xl overflow-hidden relative opacity-70">
@@ -171,14 +124,8 @@ export const PlayerCard = ({
       <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none z-3" />
       <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-transparent pointer-events-none z-3" />
 
-      {/* 
-        =========================================================
-        LAYER 4: UniFootball Details Header & Integrated Tier Dropdown Badge
-        =========================================================
-      */}
+      {/* LAYER 4: UniFootball Header & Category Selector */}
       <div className="relative z-10 p-4 flex items-center justify-between">
-        
-        {/* Top-Left: Student ID & Session */}
         <div className="flex flex-col">
           <span className="text-xs font-black tracking-tight text-white drop-shadow-md flex items-center gap-1">
             <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
@@ -189,7 +136,6 @@ export const PlayerCard = ({
           </span>
         </div>
 
-        {/* Top-Right: Sleek Compact Category Tier Dropdown Badge & Podium Admin Badge */}
         <div className="flex items-center gap-1.5">
           {isPodiumAdmin && (
             <Badge className="bg-purple-950/90 text-purple-300 border border-purple-500/60 font-black text-[9px] px-2 py-0.5 shadow-[0_0_12px_rgba(168,85,247,0.6)] animate-pulse flex items-center gap-1">
@@ -205,7 +151,6 @@ export const PlayerCard = ({
             </Badge>
           )}
 
-          {/* Compact Category Dropdown Selector Badge */}
           <div className="relative" onClick={(e) => e.stopPropagation()}>
             <select
               value={player.categoryId || player.category?.id || ''}
@@ -225,27 +170,17 @@ export const PlayerCard = ({
             <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[9px] font-black text-slate-300">▼</span>
           </div>
         </div>
-
       </div>
 
       <div className="flex-1 z-10" />
 
-      {/* 
-        =========================================================
-        GLASSMORPHIC BOTTOM DETAILS CONTAINER (Blends Seamlessly)
-        =========================================================
-      */}
+      {/* GLASSMORPHIC BOTTOM DETAILS CONTAINER */}
       <div className="relative z-10 p-4 pt-6">
-        
-        {/* Semi-transparent Glass Container */}
         <div className="bg-slate-950/40 border border-white/10 rounded-2xl p-4 pt-6 relative backdrop-blur-md shadow-2xl space-y-2.5">
-          
-          {/* Prominent Jersey Number Badge Overlapping Silhouette */}
           <div className={`absolute -top-4 left-1/2 -translate-x-1/2 h-9 px-3.5 rounded-xl bg-gradient-to-r ${theme.badgeBg} flex items-center justify-center font-black text-white text-sm shadow-xl border border-white/40 tracking-wider`}>
             #{jerseyNum}
           </div>
 
-          {/* Player Name */}
           <div className="text-center pt-1">
             <h3 className="font-black text-xl text-white tracking-tight leading-none truncate drop-shadow-md">
               {player.user?.name}
@@ -257,7 +192,6 @@ export const PlayerCard = ({
             )}
           </div>
 
-          {/* Positions Tag List (Primary & Secondary) */}
           <div className="flex items-center justify-center gap-1.5 flex-wrap pt-0.5">
             <span className="px-3 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[10px] font-black uppercase tracking-wider shadow-sm">
               Primary: {player.primaryPos || 'CM'}
@@ -275,9 +209,7 @@ export const PlayerCard = ({
               Click Card to Assign Podium Admin
             </div>
           )}
-
         </div>
-
       </div>
     </Card>
   );
