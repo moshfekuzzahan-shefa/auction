@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Ca
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/Dialog';
-import { Plus, Trash2, Shield, Save } from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
+import { 
+  Plus, Trash2, Shield, Save, Settings, Users, Calendar, DollarSign, 
+  Link2, Copy, ExternalLink, AlertTriangle, Crown, Trophy, PlayCircle,
+  UserCheck, Flame, ChevronRight, Gavel
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { TeamManagerForm } from './TeamManagerForm';
 import { useAppDispatch } from '../../store/hooks';
@@ -19,6 +25,10 @@ interface CategoryRow {
 export const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
+
+  // Active Navigation Tab: SETUP | REGISTRATION | AUCTION | TOURNAMENT
+  const [activeTab, setActiveTab] = useState<'SETUP' | 'REGISTRATION' | 'AUCTION' | 'TOURNAMENT'>('SETUP');
+
   const [nukeLevel, setNukeLevel] = useState<number>(0);
   const [nukeConfirm, setNukeConfirm] = useState('');
   
@@ -45,7 +55,23 @@ export const AdminDashboard = () => {
     }
   });
 
-  // Keep internal state in sync with fetched state initially
+  const { data: allPlayers } = useQuery({
+    queryKey: ['admin', 'players'],
+    queryFn: async () => {
+      const res = await api.get('/player/admin/all');
+      return res.data.data;
+    }
+  });
+
+  const { data: pendingTeamRequests } = useQuery({
+    queryKey: ['admin', 'pending-teams'],
+    queryFn: async () => {
+      const res = await api.get('/teams/requests/pending');
+      return res.data.data;
+    }
+  });
+
+  // Keep internal state in sync with fetched system state initially
   useEffect(() => {
     if (systemState) {
       setBudgetConfig({ 
@@ -61,6 +87,10 @@ export const AdminDashboard = () => {
       if (systemState.categories && Array.isArray(systemState.categories) && systemState.categories.length > 0) {
         setCategoriesList(systemState.categories.map((c: any) => ({ name: c.name, basePrice: c.basePrice })));
       }
+      // Default active tab to current system phase if available
+      if (systemState.currentPhase) {
+        setActiveTab(systemState.currentPhase as any);
+      }
     }
   }, [systemState]);
 
@@ -70,7 +100,7 @@ export const AdminDashboard = () => {
       return res.data;
     },
     onSuccess: (_, variables) => {
-      toast.success('System Phase updated successfully');
+      toast.success(`System Phase changed to ${variables}`);
       dispatch(setPhase(variables as any));
       queryClient.invalidateQueries({ queryKey: ['system'] });
       queryClient.invalidateQueries({ queryKey: ['public'] });
@@ -120,7 +150,6 @@ export const AdminDashboard = () => {
   };
 
   const handleSaveCategories = () => {
-    // Validate
     for (let i = 0; i < categoriesList.length; i++) {
       const cat = categoriesList[i];
       if (!cat.name.trim()) {
@@ -153,6 +182,7 @@ export const AdminDashboard = () => {
     onSuccess: (data) => {
       toast.success(data.message);
       setNukeConfirm('');
+      setNukeLevel(0);
       queryClient.invalidateQueries();
     },
     onError: (error: any) => {
@@ -168,279 +198,633 @@ export const AdminDashboard = () => {
     nukeMutation.mutate();
   };
 
+  const copyRegistrationLink = () => {
+    const link = `${window.location.origin}/register/player`;
+    navigator.clipboard.writeText(link);
+    toast.success('Registration link copied to clipboard!');
+  };
+
   if (isLoading) return <div className="p-8 text-center text-slate-400">Loading System Config...</div>;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">System Configuration</h1>
-        <div className="px-4 py-2 bg-primary/10 text-primary font-medium rounded-md border border-primary/20">
-          Current Phase: {systemState?.currentPhase}
+    <div className="space-y-8 max-w-5xl mx-auto pb-16">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/90 p-6 rounded-3xl border border-slate-800 shadow-xl">
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+            <Settings className="w-8 h-8 text-emerald-400" />
+            <span>Admin Control Panel</span>
+          </h1>
+          <p className="text-xs font-semibold text-slate-400 mt-1">
+            Configure system parameters, manage registration approvals, and trigger lifecycle phases.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Badge className="px-3.5 py-1.5 bg-emerald-950 text-emerald-300 border border-emerald-500/50 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg">
+            Active Phase: {systemState?.currentPhase}
+          </Badge>
         </div>
       </div>
 
-      {/* Event Lifecycle Control */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Lifecycle Control</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
-          {['SETUP', 'REGISTRATION', 'AUCTION', 'TOURNAMENT'].map((phase) => (
-            <Button
-              key={phase}
-              variant={systemState?.currentPhase === phase ? 'primary' : 'outline'}
-              onClick={() => changePhaseMutation.mutate(phase)}
-              disabled={changePhaseMutation.isPending}
-            >
-              {phase}
-            </Button>
-          ))}
-        </CardContent>
-      </Card>
+      {/* 
+        =========================================================
+        NAVIGATION TABS: SETUP | REGISTRATION | AUCTION | TOURNAMENT
+        =========================================================
+      */}
+      <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded-2xl border border-slate-800 overflow-x-auto gap-2">
+        <button
+          onClick={() => setActiveTab('SETUP')}
+          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'SETUP'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          <span>1. Setup & Settings</span>
+        </button>
 
-      {/* Event Schedule & Countdowns */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Schedule & Countdowns</CardTitle>
-          <p className="text-sm text-muted-foreground">Set public countdown timers. Leaving a field blank disables the countdown.</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Registration Start</label>
-              <Input 
-                type="datetime-local"
-                value={scheduleConfig.registrationStart}
-                onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationStart: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Registration End</label>
-              <Input 
-                type="datetime-local"
-                value={scheduleConfig.registrationEnd}
-                onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationEnd: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Auction Start</label>
-              <Input 
-                type="datetime-local"
-                value={scheduleConfig.auctionStart}
-                onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionStart: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Auction End</label>
-              <Input 
-                type="datetime-local"
-                value={scheduleConfig.auctionEnd}
-                onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionEnd: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end pt-2">
-            <Button 
-              onClick={() => {
-                api.put('/system/schedule', scheduleConfig)
-                  .then(() => {
-                    toast.success('Schedule saved');
-                    queryClient.invalidateQueries();
-                  })
-                  .catch(() => toast.error('Failed to save schedule'));
-              }}
-            >
-              Save Schedule
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <button
+          onClick={() => setActiveTab('REGISTRATION')}
+          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'REGISTRATION'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>2. Registration Phase</span>
+        </button>
 
-      {/* Budget & Roster Rules */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Budget & Roster Rules</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1 space-y-2 w-full">
-              <label className="text-sm font-medium">Total Team Budget ($)</label>
-              <Input 
-                type="number"
-                value={budgetConfig.totalBudget}
-                onChange={(e) => setBudgetConfig(prev => ({ ...prev, totalBudget: Number(e.target.value) }))}
-              />
-            </div>
-            <div className="flex-1 space-y-2 w-full">
-              <label className="text-sm font-medium">Minimum Roster Size</label>
-              <Input 
-                type="number"
-                value={budgetConfig.minRoster}
-                onChange={(e) => setBudgetConfig(prev => ({ ...prev, minRoster: Number(e.target.value) }))}
-              />
-            </div>
-            <Button 
-              onClick={() => {
-                api.put('/system/config', budgetConfig)
-                  .then(() => {
-                    toast.success('Config saved');
-                    queryClient.invalidateQueries();
-                  })
-                  .catch(() => toast.error('Failed to save config'));
-              }}
-            >
-              Save Configuration
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <button
+          onClick={() => setActiveTab('AUCTION')}
+          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'AUCTION'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+          }`}
+        >
+          <Gavel className="w-4 h-4" />
+          <span>3. Auction Phase</span>
+        </button>
 
-      <TeamManagerForm />
+        <button
+          onClick={() => setActiveTab('TOURNAMENT')}
+          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            activeTab === 'TOURNAMENT'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
+          }`}
+        >
+          <Trophy className="w-4 h-4" />
+          <span>4. Tournament Phase</span>
+        </button>
+      </div>
 
-      {/* Dynamic Player Categories & Base Prices Form */}
-      <Card className="bg-slate-900/90 border-slate-800">
-        <CardHeader className="bg-slate-950/80 border-b border-slate-800">
-          <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-emerald-400" />
-            <span>Player Categories & Base Prices Configuration</span>
-          </CardTitle>
-          <p className="text-xs text-slate-400">
-            Define player category tiers and their starting auction base prices.
-          </p>
-        </CardHeader>
-
-        <CardContent className="p-6 space-y-4">
+      {/* 
+        =========================================================
+        TAB 1: SETUP PHASE / SYSTEM SETTINGS
+        Contains all relocated configuration blocks:
+        1. Player Categories & Base Prices
+        2. Event Schedule & Countdowns
+        3. Budget & Roster Rules
+        4. Franchise Team Creation
+        5. Danger Zone: Nuke Protocols
+        =========================================================
+      */}
+      {activeTab === 'SETUP' && (
+        <div className="space-y-8 animate-fadeIn">
           
-          {/* Header Labels */}
-          <div className="grid grid-cols-12 gap-3 text-xs uppercase font-extrabold tracking-wider text-slate-400 px-1">
-            <div className="col-span-6">Category Tier Name</div>
-            <div className="col-span-5">Base Price ($)</div>
-            <div className="col-span-1 text-center">Action</div>
-          </div>
+          {/* Phase Activation Bar */}
+          <Card className="bg-slate-900/90 border-slate-800">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-white text-sm">Activate Setup Phase</h3>
+                <p className="text-xs text-slate-400">Lock tournament configurations before opening registrations.</p>
+              </div>
+              <Button
+                onClick={() => changePhaseMutation.mutate('SETUP')}
+                disabled={systemState?.currentPhase === 'SETUP' || changePhaseMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-5 h-9 rounded-xl shadow-md shrink-0"
+              >
+                Set System to SETUP Phase
+              </Button>
+            </CardContent>
+          </Card>
 
-          {/* Dynamic Rows */}
-          <div className="space-y-3">
-            {categoriesList.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <div className="col-span-6">
+          {/* 1. Player Categories & Base Prices Configuration */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Shield className="w-5 h-5 text-emerald-400" />
+                <span>Player Categories & Base Prices Configuration</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Define player category tiers and their starting auction base prices before player registrations open.
+              </p>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-12 gap-3 text-xs uppercase font-extrabold tracking-wider text-slate-400 px-1">
+                <div className="col-span-6">Category Tier Name</div>
+                <div className="col-span-5">Base Price ($)</div>
+                <div className="col-span-1 text-center">Action</div>
+              </div>
+
+              <div className="space-y-3">
+                {categoriesList.map((row, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    <div className="col-span-6">
+                      <Input 
+                        value={row.name}
+                        onChange={(e) => handleCategoryRowChange(idx, 'name', e.target.value)}
+                        placeholder="e.g. Platinum, Gold, Silver"
+                        className="h-10 bg-slate-900 border-slate-700 text-white text-sm font-semibold rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <Input 
+                        type="number"
+                        value={row.basePrice}
+                        onChange={(e) => handleCategoryRowChange(idx, 'basePrice', e.target.value)}
+                        placeholder="Base Price ($)"
+                        min={1}
+                        className="h-10 bg-slate-900 border-slate-700 text-emerald-400 font-mono font-bold text-sm rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCategoryRow(idx)}
+                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                        title="Remove Category"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddCategoryRow}
+                  className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  <span>Add Category Tier</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleSaveCategories}
+                  disabled={updateCategoriesMutation.isPending}
+                  className="w-full sm:w-auto h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 rounded-xl shadow-lg shadow-emerald-950/50 flex items-center space-x-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Category Base Prices</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. Event Schedule & Countdowns */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <span>Event Schedule & Countdowns</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Set public countdown timers. Leaving a field blank disables the countdown banner.
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration Start</label>
                   <Input 
-                    value={row.name}
-                    onChange={(e) => handleCategoryRowChange(idx, 'name', e.target.value)}
-                    placeholder="e.g. Platinum, Gold, Silver"
-                    className="h-10 bg-slate-900 border-slate-700 text-white text-sm font-semibold rounded-lg"
+                    type="datetime-local"
+                    value={scheduleConfig.registrationStart}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationStart: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
                   />
                 </div>
-                <div className="col-span-5">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration End</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.registrationEnd}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationEnd: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Auction Start</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.auctionStart}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionStart: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Auction End</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.auctionEnd}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionEnd: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => {
+                    api.put('/system/schedule', scheduleConfig)
+                      .then(() => {
+                        toast.success('Schedule saved successfully!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save schedule'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Schedule
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3. Budget & Roster Rules */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <DollarSign className="w-5 h-5 text-emerald-400" />
+                <span>Budget & Roster Rules</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 space-y-2 w-full">
+                  <label className="text-xs font-bold uppercase text-slate-300">Total Team Budget ($)</label>
                   <Input 
                     type="number"
-                    value={row.basePrice}
-                    onChange={(e) => handleCategoryRowChange(idx, 'basePrice', e.target.value)}
-                    placeholder="Base Price ($)"
-                    min={1}
-                    className="h-10 bg-slate-900 border-slate-700 text-emerald-400 font-mono font-bold text-sm rounded-lg"
+                    value={budgetConfig.totalBudget}
+                    onChange={(e) => setBudgetConfig(prev => ({ ...prev, totalBudget: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-emerald-400 font-mono font-bold text-sm"
                   />
                 </div>
-                <div className="col-span-1 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCategoryRow(idx)}
-                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
-                    title="Remove Category"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="flex-1 space-y-2 w-full">
+                  <label className="text-xs font-bold uppercase text-slate-300">Minimum Roster Size</label>
+                  <Input 
+                    type="number"
+                    value={budgetConfig.minRoster}
+                    onChange={(e) => setBudgetConfig(prev => ({ ...prev, minRoster: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-white font-mono font-bold text-sm"
+                  />
+                </div>
+                <Button 
+                  onClick={() => {
+                    api.put('/system/config', budgetConfig)
+                      .then(() => {
+                        toast.success('Budget & Roster Rules saved!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save config'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Configuration
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Franchise Team Creation Form */}
+          <TeamManagerForm />
+
+          {/* 4. Danger Zone: Nuke Protocols */}
+          <Card className="border-red-500/50 bg-slate-900/90 shadow-xl">
+            <CardHeader className="bg-red-950/30 border-b border-red-500/30">
+              <CardTitle className="text-red-400 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <span>Danger Zone: Nuke Protocols</span>
+              </CardTitle>
+              <p className="text-xs text-red-300/80">These actions are completely irreversible. Proceed with extreme caution.</p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 border border-red-500/30 bg-red-950/20 rounded-xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <h4 className="font-bold text-red-400 text-sm">Level 1: Tournament Wipe</h4>
+                    <p className="text-xs text-slate-400 mt-1">Deletes all matches, scores, points tables, and stats. Reverts event back to end of Auction.</p>
+                  </div>
+                  <Button variant="destructive" className="w-full text-xs font-bold h-9 rounded-xl" onClick={() => setNukeLevel(1)}>Execute Level 1</Button>
+                </div>
+                
+                <div className="p-4 border border-red-500/50 bg-red-950/40 rounded-xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <h4 className="font-bold text-red-400 text-sm">Level 2: Roster Wipe</h4>
+                    <p className="text-xs text-slate-400 mt-1">Deletes all players, teams, ledgers, and uploaded photos. Reverts event back to Pre-Registration.</p>
+                  </div>
+                  <Button variant="destructive" className="w-full text-xs font-bold h-9 rounded-xl" onClick={() => setNukeLevel(2)}>Execute Level 2</Button>
+                </div>
+
+                <div className="p-4 border-2 border-red-500 bg-red-950/60 rounded-xl flex flex-col justify-between space-y-3">
+                  <div>
+                    <h4 className="font-bold text-red-400 text-sm">Level 3: Factory Reset</h4>
+                    <p className="text-xs text-slate-400 mt-1">Wipes all tables and resets database. Retains only Super Admin credentials.</p>
+                  </div>
+                  <Button variant="destructive" className="w-full text-xs font-bold h-9 rounded-xl" onClick={() => setNukeLevel(3)}>Execute Level 3</Button>
                 </div>
               </div>
-            ))}
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Action Buttons: Add Tier & Save */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddCategoryRow}
-              className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4 text-emerald-400" />
-              <span>Add Category Tier</span>
-            </Button>
+        </div>
+      )}
 
-            <Button
-              type="button"
-              onClick={handleSaveCategories}
-              disabled={updateCategoriesMutation.isPending}
-              className="w-full sm:w-auto h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 rounded-xl shadow-lg shadow-emerald-950/50 flex items-center space-x-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>Update Category Base Prices</span>
-            </Button>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* Danger Zone: Nuke Protocols */}
-      <Card className="border-destructive shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone: Nuke Protocols</CardTitle>
-          <p className="text-sm text-muted-foreground">These actions are completely irreversible. Proceed with extreme caution.</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="p-4 border border-destructive/30 bg-destructive/5 rounded-lg flex flex-col justify-between">
+      {/* 
+        =========================================================
+        TAB 2: REGISTRATION PHASE (Clean Management Tools Only)
+        Keeps strictly registration management tools:
+        1. Registration status toggle & public share link
+        2. Player roster & category assignment shortcut
+        3. Pending team requests & podium admin approval shortcuts
+        =========================================================
+      */}
+      {activeTab === 'REGISTRATION' && (
+        <div className="space-y-8 animate-fadeIn">
+          
+          {/* Phase Activation Bar */}
+          <Card className="bg-slate-900/90 border-slate-800">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h4 className="font-bold text-destructive">Level 1: Tournament Wipe</h4>
-                <p className="text-sm text-muted-foreground mt-2 mb-4">Deletes all matches, scores, points tables, and stats. Reverts the event back to the end of the Auction.</p>
+                <h3 className="font-bold text-white text-sm">Activate Registration Phase</h3>
+                <p className="text-xs text-slate-400">Open public registration link and allow players to submit profiles.</p>
               </div>
-              <Button variant="destructive" className="w-full" onClick={() => setNukeLevel(1)}>Execute Level 1</Button>
-            </div>
+              <Button
+                onClick={() => changePhaseMutation.mutate('REGISTRATION')}
+                disabled={systemState?.currentPhase === 'REGISTRATION' || changePhaseMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-5 h-9 rounded-xl shadow-md shrink-0"
+              >
+                Set System to REGISTRATION Phase
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Registration Share Link & Live Status */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Link2 className="w-5 h-5 text-emerald-400" />
+                <span>Public Player Registration Link</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Input 
+                  readOnly
+                  value={`${window.location.origin}/register/player`}
+                  className="bg-slate-950 border-slate-700 text-emerald-300 font-mono text-xs h-11"
+                />
+                <Button 
+                  onClick={copyRegistrationLink}
+                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-5 rounded-xl shrink-0 flex items-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Link</span>
+                </Button>
+                <Link to="/register/player" target="_blank">
+                  <Button 
+                    variant="outline"
+                    className="w-full sm:w-auto border-slate-700 text-slate-300 hover:text-white h-11 px-4 rounded-xl flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open Form</span>
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Management Shortcuts Grid */}
+          <div className="grid md:grid-cols-3 gap-6">
             
-            <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-lg flex flex-col justify-between">
-              <div>
-                <h4 className="font-bold text-destructive">Level 2: Roster Wipe</h4>
-                <p className="text-sm text-muted-foreground mt-2 mb-4">Deletes all players, teams, ledgers, and Cloudinary images. Reverts the event back to Pre-Registration.</p>
-              </div>
-              <Button variant="destructive" className="w-full" onClick={() => setNukeLevel(2)}>Execute Level 2</Button>
-            </div>
+            {/* Player Roster & Tier Assignment Shortcut */}
+            <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-emerald-500/50 transition-all group">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-emerald-950/80 rounded-2xl border border-emerald-500/40 text-emerald-400">
+                    <UserCheck className="w-6 h-6" />
+                  </div>
+                  <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-mono font-bold text-xs">
+                    {allPlayers?.length || 0} Registered
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
+                    Players Directory & Tiering
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Review registered player cards, assign Category Tiers (Platinum/Gold/Silver), and grant Podium Admin rights.
+                  </p>
+                </div>
+                <Link to="/admin/players" className="block pt-2">
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 rounded-xl flex items-center justify-center gap-2 shadow-md">
+                    <span>Manage Players Directory</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-            <div className="p-4 border-2 border-destructive bg-destructive/20 rounded-lg flex flex-col justify-between">
-              <div>
-                <h4 className="font-bold text-destructive">Level 3: Factory Reset</h4>
-                <p className="text-sm text-muted-foreground mt-2 mb-4">Drops all tables and completely wipes the database. Retains only Super Admin credentials.</p>
-              </div>
-              <Button variant="destructive" className="w-full" onClick={() => setNukeLevel(3)}>Execute Level 3</Button>
-            </div>
+            {/* Franchise Team Requests Shortcut */}
+            <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-blue-500/50 transition-all group">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-blue-950/80 rounded-2xl border border-blue-500/40 text-blue-400">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <Badge className="bg-blue-950 text-blue-300 border border-blue-500/40 font-mono font-bold text-xs">
+                    {pendingTeamRequests?.length || 0} Pending
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
+                    Team Creation Requests
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Approve or reject franchise team registration requests from prospective team managers.
+                  </p>
+                </div>
+                <Link to="/admin/team-requests" className="block pt-2">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-10 rounded-xl flex items-center justify-center gap-2 shadow-md">
+                    <span>Review Team Requests</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Podium Admin Applications Shortcut */}
+            <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-purple-500/50 transition-all group">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-3 bg-purple-950/80 rounded-2xl border border-purple-500/40 text-purple-400">
+                    <Crown className="w-6 h-6" />
+                  </div>
+                  <Badge className="bg-purple-950 text-purple-300 border border-purple-500/40 font-mono font-bold text-xs">
+                    Podium Roles
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
+                    Podium Admin Applications
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Review and approve applications for Podium Admin rights to manage live auction proceedings.
+                  </p>
+                </div>
+                <Link to="/admin/podium-requests" className="block pt-2">
+                  <Button className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs h-10 rounded-xl flex items-center justify-center gap-2 shadow-md">
+                    <span>Review Podium Requests</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
           </div>
-        </CardContent>
-      </Card>
+
+        </div>
+      )}
+
+      {/* 
+        =========================================================
+        TAB 3: AUCTION PHASE
+        =========================================================
+      */}
+      {activeTab === 'AUCTION' && (
+        <div className="space-y-8 animate-fadeIn">
+          <Card className="bg-slate-900/90 border-slate-800">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-white text-sm">Activate Auction Phase</h3>
+                <p className="text-xs text-slate-400">Launch live player bidding rooms and enable live team budget tracking.</p>
+              </div>
+              <Button
+                onClick={() => changePhaseMutation.mutate('AUCTION')}
+                disabled={systemState?.currentPhase === 'AUCTION' || changePhaseMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-5 h-9 rounded-xl shadow-md shrink-0"
+              >
+                Set System to AUCTION Phase
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Gavel className="w-5 h-5 text-emerald-400" />
+                <span>Live Auction Controls</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <p className="text-xs text-slate-300">
+                Access the Live Auction Podium to start bidding timers, select unassigned players, and assign winning team bids.
+              </p>
+              <Link to="/auction/admin">
+                <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl flex items-center gap-2 shadow-lg">
+                  <PlayCircle className="w-4 h-4" />
+                  <span>Launch Live Auction Podium</span>
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 
+        =========================================================
+        TAB 4: TOURNAMENT PHASE
+        =========================================================
+      */}
+      {activeTab === 'TOURNAMENT' && (
+        <div className="space-y-8 animate-fadeIn">
+          <Card className="bg-slate-900/90 border-slate-800">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-white text-sm">Activate Tournament Phase</h3>
+                <p className="text-xs text-slate-400">Lock rosters and open match fixture management and points tables.</p>
+              </div>
+              <Button
+                onClick={() => changePhaseMutation.mutate('TOURNAMENT')}
+                disabled={systemState?.currentPhase === 'TOURNAMENT' || changePhaseMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-5 h-9 rounded-xl shadow-md shrink-0"
+              >
+                Set System to TOURNAMENT Phase
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Trophy className="w-5 h-5 text-emerald-400" />
+                <span>Tournament Operations Panel</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <p className="text-xs text-slate-300">
+                Manage match schedules, enter live goal/assist events, and track team standings.
+              </p>
+              <Link to="/tournament/admin">
+                <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl flex items-center gap-2 shadow-lg">
+                  <Trophy className="w-4 h-4" />
+                  <span>Open Tournament Operations</span>
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Nuke Protocol Confirmation Modal */}
       <Dialog open={nukeLevel > 0} onOpenChange={(open) => !open && setNukeLevel(0)}>
-        <DialogContent>
+        <DialogContent className="bg-slate-950 border-red-500 text-white">
           <DialogHeader>
-            <DialogTitle className="text-destructive">Confirm Nuke Protocol Level {nukeLevel}</DialogTitle>
-            <DialogDescription>
-              This action is irreversible. It will permanently delete database records and associated media assets.
+            <DialogTitle className="text-red-400 font-black">Confirm Nuke Protocol Level {nukeLevel}</DialogTitle>
+            <DialogDescription className="text-slate-400 text-xs">
+              This action is completely irreversible. It will permanently delete database records and associated media assets.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm font-medium">To confirm, please type the following exactly as shown:</p>
-            <div className="p-2 bg-muted rounded text-center font-mono text-destructive select-all">
+            <p className="text-xs font-bold text-slate-300">To confirm, please type the following exactly as shown:</p>
+            <div className="p-2.5 bg-slate-900 border border-red-500/40 rounded-xl text-center font-mono font-black text-red-400 text-sm select-all">
               CONFIRM_NUKE_LEVEL_{nukeLevel}
             </div>
             <Input 
               placeholder={`Type CONFIRM_NUKE_LEVEL_${nukeLevel}`}
               value={nukeConfirm}
               onChange={(e) => setNukeConfirm(e.target.value)}
+              className="bg-slate-900 border-slate-700 text-white font-mono text-xs"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNukeLevel(0)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setNukeLevel(0)} className="border-slate-700 text-slate-300">Cancel</Button>
             <Button 
               variant="destructive" 
               onClick={handleNuke}
               disabled={nukeMutation.isPending || nukeConfirm !== `CONFIRM_NUKE_LEVEL_${nukeLevel}`}
+              className="font-bold text-xs"
             >
               Confirm & Execute
             </Button>
