@@ -75,10 +75,11 @@ model AuditLog {
 }
 
 model PlayerCategory {
-  id        String    @id @default(uuid())
-  name      String    @unique
+  id        String         @id @default(uuid())
+  name      String         @unique
   basePrice Int
   profiles  Profile[]
+  bidRules  BidRaiseRule[]
 }
 
 model PlayerPosition {
@@ -98,12 +99,14 @@ enum IncrementType {
 }
 
 model BidRaiseRule {
-  id             String        @id @default(uuid())
-  minPrice       Float         @default(0)
-  maxPrice       Float         @default(100000)
-  incrementType  IncrementType @default(PERCENT)
-  incrementValue Float         @default(10)
-  createdAt      DateTime      @default(now())
+  id             String          @id @default(uuid())
+  minPrice       Float           @default(0)
+  maxPrice       Float           @default(100000)
+  incrementType  IncrementType   @default(PERCENT)
+  incrementValue Float           @default(10)
+  categoryId     String?
+  category       PlayerCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
 }
 
 enum TeamStatus {

@@ -24,6 +24,7 @@ interface CategoryRow {
 
 interface SlabRuleRow {
   id?: string;
+  categoryId?: string | null;
   minPrice: number;
   maxPrice: number;
   incrementType: 'PERCENT' | 'FIXED';
@@ -170,10 +171,23 @@ export const AdminDashboard = () => {
 
   const [announcementText, setAnnouncementText] = useState<string>('IPL & FUT Style Live Auction Podium');
 
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ['categories', 'all'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/categories');
+        const raw = res.data;
+        return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : (raw?.categories || []));
+      } catch {
+        return [];
+      }
+    }
+  });
+
   const [slabRules, setSlabRules] = useState<SlabRuleRow[]>([
-    { minPrice: 0, maxPrice: 1000, incrementType: 'PERCENT', incrementValue: 10 },
-    { minPrice: 1001, maxPrice: 5000, incrementType: 'PERCENT', incrementValue: 5 },
-    { minPrice: 5001, maxPrice: 100000, incrementType: 'FIXED', incrementValue: 500 },
+    { categoryId: null, minPrice: 0, maxPrice: 1000, incrementType: 'PERCENT', incrementValue: 10 },
+    { categoryId: null, minPrice: 1001, maxPrice: 5000, incrementType: 'PERCENT', incrementValue: 5 },
+    { categoryId: null, minPrice: 5001, maxPrice: 100000, incrementType: 'FIXED', incrementValue: 500 },
   ]);
 
   const { data: rulesData } = useQuery({
@@ -188,6 +202,7 @@ export const AdminDashboard = () => {
     if (rulesData && Array.isArray(rulesData) && rulesData.length > 0) {
       setSlabRules(rulesData.map((r: any) => ({
         id: r.id,
+        categoryId: r.categoryId || r.category?.id || null,
         minPrice: r.minPrice,
         maxPrice: r.maxPrice,
         incrementType: r.incrementType || 'PERCENT',
@@ -995,9 +1010,10 @@ export const AdminDashboard = () => {
 
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-12 gap-3 text-xs uppercase font-extrabold tracking-wider text-slate-400 px-1">
-                <div className="col-span-3">Min Price ($)</div>
-                <div className="col-span-3">Max Price ($)</div>
-                <div className="col-span-3">Increment Type</div>
+                <div className="col-span-3">Category Tier</div>
+                <div className="col-span-2">Min Price ($)</div>
+                <div className="col-span-2">Max Price ($)</div>
+                <div className="col-span-2">Increment Type</div>
                 <div className="col-span-2">Increment Value</div>
                 <div className="col-span-1 text-center">Action</div>
               </div>
@@ -1006,6 +1022,21 @@ export const AdminDashboard = () => {
                 {slabRules.map((row, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                     <div className="col-span-3">
+                      <select
+                        value={row.categoryId || ''}
+                        onChange={(e) => {
+                          const val = e.target.value || null;
+                          setSlabRules(prev => prev.map((r, i) => i === idx ? { ...r, categoryId: val } : r));
+                        }}
+                        className="w-full h-10 bg-slate-900 border border-slate-700 text-emerald-400 text-xs font-bold rounded-lg px-2 focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="">ALL (Universal / Default)</option>
+                        {dbCategories.map((cat: any) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
                       <Input 
                         type="number"
                         value={row.minPrice}
@@ -1017,7 +1048,7 @@ export const AdminDashboard = () => {
                         className="h-10 bg-slate-900 border-slate-700 text-white font-mono text-xs rounded-lg"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Input 
                         type="number"
                         value={row.maxPrice}
@@ -1029,7 +1060,7 @@ export const AdminDashboard = () => {
                         className="h-10 bg-slate-900 border-slate-700 text-white font-mono text-xs rounded-lg"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <select
                         value={row.incrementType}
                         onChange={(e) => {
@@ -1058,7 +1089,7 @@ export const AdminDashboard = () => {
                       <button
                         type="button"
                         onClick={() => setSlabRules(prev => prev.filter((_, i) => i !== idx))}
-                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                         title="Remove Rule"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1074,9 +1105,9 @@ export const AdminDashboard = () => {
                   variant="outline"
                   onClick={() => {
                     const lastMax = slabRules.length > 0 ? slabRules[slabRules.length - 1].maxPrice : 0;
-                    setSlabRules(prev => [...prev, { minPrice: lastMax + 1, maxPrice: lastMax + 5000, incrementType: 'PERCENT', incrementValue: 10 }]);
+                    setSlabRules(prev => [...prev, { categoryId: null, minPrice: lastMax + 1, maxPrice: lastMax + 5000, incrementType: 'PERCENT', incrementValue: 10 }]);
                   }}
-                  className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2"
+                  className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-emerald-400" />
                   <span>Add Price Slab Rule</span>

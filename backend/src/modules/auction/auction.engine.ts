@@ -306,7 +306,18 @@ export class AuctionEngine {
       return { minimumRaise: 0, nextValidBid: this.currentBid, incrementType: 'PERCENT', incrementValue: 10 };
     }
 
+    // Fetch player category if currentPlayerId exists
+    let playerCategoryId: string | null = null;
+    if (this.currentPlayerId) {
+      const player = await prisma.profile.findUnique({
+        where: { userId: this.currentPlayerId },
+        select: { categoryId: true }
+      });
+      playerCategoryId = player?.categoryId || null;
+    }
+
     const rules = await prisma.bidRaiseRule.findMany({
+      include: { category: true },
       orderBy: { minPrice: 'asc' }
     });
 
@@ -315,8 +326,19 @@ export class AuctionEngine {
     let incrementValue = 10;
 
     if (rules.length > 0) {
-      const matchingRule = rules.find(r => this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice) 
-        || rules[rules.length - 1];
+      // Priority 1: Match BOTH player category AND price range
+      // Priority 2: Match ALL categories rule (categoryId is null) AND price range
+      // Priority 3: Any rule matching price range
+      let categoryRules = rules.filter(r => r.categoryId === playerCategoryId);
+      if (categoryRules.length === 0) {
+        categoryRules = rules.filter(r => !r.categoryId);
+      }
+      if (categoryRules.length === 0) {
+        categoryRules = rules;
+      }
+
+      const matchingRule = categoryRules.find(r => this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice) 
+        || categoryRules[categoryRules.length - 1];
 
       if (matchingRule) {
         incrementType = (matchingRule as any).incrementType || 'PERCENT';

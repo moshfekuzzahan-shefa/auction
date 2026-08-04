@@ -98,13 +98,13 @@ export class ConfigController {
   }
   static async createBidRaiseRule(req: Request, res: Response, next: NextFunction) {
     try {
-      const { minPrice, maxPrice, incrementType, incrementValue, minPercent, maxPercent, raisePercent } = req.body;
+      const { minPrice, maxPrice, incrementType, incrementValue, minPercent, maxPercent, raisePercent, categoryId } = req.body;
       const min = minPrice !== undefined ? Number(minPrice) : Number(minPercent || 0);
       const max = maxPrice !== undefined ? Number(maxPrice) : Number(maxPercent || 100000);
       const type = (incrementType as 'PERCENT' | 'FIXED') || 'PERCENT';
       const val = incrementValue !== undefined ? Number(incrementValue) : Number(raisePercent || 10);
 
-      const rule = await ConfigService.createBidRaiseRule(min, max, type, val);
+      const rule = await ConfigService.createBidRaiseRule(min, max, type, val, categoryId);
       return sendSuccessResponse({ res, statusCode: 201, data: rule });
     } catch (error: any) {
       return sendErrorResponse({ res, message: error.message });
