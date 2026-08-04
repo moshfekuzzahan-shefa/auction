@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSocketContext } from '../../providers/SocketProvider';
 import { useAppSelector } from '../../store/hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import { AuctionPodium } from '../../components/auction/AuctionPodium';
 
 export const LiveAuction = () => {
+  const queryClient = useQueryClient();
   const { socket } = useSocketContext();
   const { user } = useAppSelector((state) => state.auth);
   const [auctionState, setAuctionState] = useState<any>(null);
@@ -32,6 +34,23 @@ export const LiveAuction = () => {
     const handleSuccess = (msg: string) => toast.success(msg);
     const handleError = (msg: string) => toast.error(msg);
 
+    const handlePlayerSold = ({ winnerName, finalAmount, playerName }: any) => {
+      toast.success(`🎉 ${playerName} SOLD to ${winnerName} for $${finalAmount.toLocaleString()}!`, {
+        duration: 5000,
+        style: { background: '#059669', color: 'white', border: 'none' }
+      });
+      queryClient.invalidateQueries({ queryKey: ['auction', 'history'] });
+      queryClient.invalidateQueries({ queryKey: ['players', 'unsold'] });
+      queryClient.invalidateQueries({ queryKey: ['team'] }); // for TeamDashboard roster
+    };
+
+    const handlePlayerUnsold = ({ playerName }: any) => {
+      toast.info(`⚠️ ${playerName} remained UNSOLD!`, {
+        duration: 4000
+      });
+      queryClient.invalidateQueries({ queryKey: ['players', 'unsold'] });
+    };
+
     const handleConnect = () => {
       socket.emit('JOIN_AUCTION_ROOM');
     };
@@ -39,6 +58,8 @@ export const LiveAuction = () => {
     socket.on('AUCTION_STATE', handleState);
     socket.on('TIMER_TICK', handleTick);
     socket.on('BID_PLACED', handleBidPlaced);
+    socket.on('PLAYER_SOLD', handlePlayerSold);
+    socket.on('PLAYER_UNSOLD', handlePlayerUnsold);
     socket.on('SUCCESS', handleSuccess);
     socket.on('ERROR', handleError);
     socket.on('connect', handleConnect);
@@ -47,6 +68,8 @@ export const LiveAuction = () => {
       socket.off('AUCTION_STATE', handleState);
       socket.off('TIMER_TICK', handleTick);
       socket.off('BID_PLACED', handleBidPlaced);
+      socket.off('PLAYER_SOLD', handlePlayerSold);
+      socket.off('PLAYER_UNSOLD', handlePlayerUnsold);
       socket.off('SUCCESS', handleSuccess);
       socket.off('ERROR', handleError);
       socket.off('connect', handleConnect);

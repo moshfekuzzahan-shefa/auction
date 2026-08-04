@@ -310,11 +310,23 @@ export class AuctionEngine {
           }
         });
       });
-      this.io.emit('PLAYER_SOLD', { winnerId, finalAmount, playerId: this.currentPlayerId });
-      this.io.emit('player_sold', { winnerId, finalAmount, playerId: this.currentPlayerId });
+
+      // Update in-memory cache for immediate broadcast sync
+      const winningTeam = this.cachedTeams.find(t => t.id === winnerId);
+      if (winningTeam) {
+        winningTeam.budget -= finalAmount;
+        if (!winningTeam._count) winningTeam._count = { players: 0 };
+        winningTeam._count.players += 1;
+      }
+      const playerName = this.cachedPlayer?.user?.name || 'Unknown Player';
+      const winnerName = winningTeam?.name || 'Unknown Team';
+
+      this.io.emit('PLAYER_SOLD', { winnerId, winnerName, finalAmount, playerId: this.currentPlayerId, playerName });
+      this.io.emit('player_sold', { winnerId, winnerName, finalAmount, playerId: this.currentPlayerId, playerName });
     } else {
-      this.io.emit('PLAYER_UNSOLD', { result: 'UNSOLD', playerId: this.currentPlayerId });
-      this.io.emit('player_unsold', { result: 'UNSOLD', playerId: this.currentPlayerId });
+      const playerName = this.cachedPlayer?.user?.name || 'Unknown Player';
+      this.io.emit('PLAYER_UNSOLD', { result: 'UNSOLD', playerId: this.currentPlayerId, playerName });
+      this.io.emit('player_unsold', { result: 'UNSOLD', playerId: this.currentPlayerId, playerName });
     }
     
     this.currentPlayerId = null;

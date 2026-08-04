@@ -55,6 +55,13 @@ export const AuctionAdminPage = () => {
     socket.on('SUCCESS', (msg) => toast.success(msg));
     socket.on('ERROR', (msg) => toast.error(msg));
 
+    const handleAuctionEnd = () => {
+      refetch();
+      refetchHistory();
+    };
+    socket.on('PLAYER_SOLD', handleAuctionEnd);
+    socket.on('PLAYER_UNSOLD', handleAuctionEnd);
+
     return () => {
       socket.off('AUCTION_STATE');
       socket.off('TIMER_TICK');
@@ -62,6 +69,8 @@ export const AuctionAdminPage = () => {
       socket.off('TIMER_EXTENDED');
       socket.off('SUCCESS');
       socket.off('ERROR');
+      socket.off('PLAYER_SOLD', handleAuctionEnd);
+      socket.off('PLAYER_UNSOLD', handleAuctionEnd);
     };
   }, [socket]);
 
