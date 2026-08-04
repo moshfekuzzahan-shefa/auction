@@ -17,6 +17,25 @@ export class TournamentController {
     }
   }
 
+  static async generateAutoFixtures(req: Request, res: Response, next: NextFunction) {
+    try {
+      const fixtures = await TournamentService.generateAutoFixtures();
+      return sendSuccessResponse({ res, statusCode: 201, message: 'Tournament fixtures generated successfully', data: fixtures });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
+  static async deleteFixture(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      await TournamentService.deleteFixture(id as string);
+      return sendSuccessResponse({ res, message: 'Fixture deleted successfully' });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
   static async getFixtures(req: Request, res: Response, next: NextFunction) {
     try {
       const fixtures = await TournamentService.getFixtures();

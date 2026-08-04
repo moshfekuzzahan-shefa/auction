@@ -48,6 +48,46 @@ export class TournamentService {
     }
   }
 
+  static async generateAutoFixtures() {
+    const teams = await prisma.team.findMany({
+      orderBy: { name: 'asc' }
+    });
+
+    if (teams.length < 2) {
+      throw new Error('At least 2 registered franchise teams are required to generate tournament fixtures.');
+    }
+
+    const matchesToCreate: any[] = [];
+    const venues = ['Central Stadium', 'Main Arena', 'Stadium B', 'University Grounds'];
+
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        matchesToCreate.push({
+          homeTeamId: teams[i].id,
+          awayTeamId: teams[j].id,
+          type: 'SINGLE' as const,
+          round: 'Group Stage',
+          venue: venues[(i + j) % venues.length],
+          status: 'UPCOMING' as const,
+          scheduledTime: new Date(Date.now() + (matchesToCreate.length + 1) * 86400000)
+        });
+      }
+    }
+
+    await prisma.match.createMany({
+      data: matchesToCreate
+    });
+
+    return prisma.match.findMany({
+      include: { homeTeam: true, awayTeam: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  static async deleteFixture(id: string) {
+    return prisma.match.delete({ where: { id } });
+  }
+
   static async getFixtures() {
     return prisma.match.findMany({
       include: {

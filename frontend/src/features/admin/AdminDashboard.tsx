@@ -60,6 +60,83 @@ export const AdminDashboard = () => {
     pointsPerDraw: 1
   });
 
+  const [newMatch, setNewMatch] = useState({
+    homeTeamId: '',
+    awayTeamId: '',
+    round: 'Group Stage',
+    type: 'SINGLE',
+    scheduledTime: '',
+    venue: 'Central Stadium'
+  });
+
+  const { data: teamsList = [] } = useQuery({
+    queryKey: ['teams', 'all'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/teams');
+        const raw = res.data;
+        return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : (raw?.teams || []));
+      } catch {
+        return [];
+      }
+    }
+  });
+
+  const { data: fixturesList = [], refetch: refetchFixtures } = useQuery({
+    queryKey: ['tournament', 'fixtures'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/tournament/fixtures');
+        return res.data?.data || res.data || [];
+      } catch {
+        return [];
+      }
+    }
+  });
+
+  const handleGenerateAutoFixtures = async () => {
+    try {
+      await api.post('/tournament/generate-fixtures');
+      toast.success('Round-Robin tournament fixtures generated successfully!');
+      refetchFixtures();
+      queryClient.invalidateQueries();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to generate fixtures');
+    }
+  };
+
+  const handleCreateManualMatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMatch.homeTeamId || !newMatch.awayTeamId) {
+      toast.error('Please select both Home and Away teams');
+      return;
+    }
+    if (newMatch.homeTeamId === newMatch.awayTeamId) {
+      toast.error('Home and Away teams must be different');
+      return;
+    }
+
+    try {
+      await api.post('/matches', newMatch);
+      toast.success('New match scheduled successfully!');
+      setNewMatch({ homeTeamId: '', awayTeamId: '', round: 'Group Stage', type: 'SINGLE', scheduledTime: '', venue: 'Central Stadium' });
+      refetchFixtures();
+      queryClient.invalidateQueries();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to create match');
+    }
+  };
+
+  const handleDeleteMatch = async (id: string) => {
+    try {
+      await api.delete(`/tournament/fixtures/${id}`);
+      toast.success('Match fixture deleted');
+      refetchFixtures();
+    } catch (err: any) {
+      toast.error('Failed to delete fixture');
+    }
+  };
+
   const [categoriesList, setCategoriesList] = useState<CategoryRow[]>([
     { name: 'Platinum', basePrice: 1000 },
     { name: 'Gold', basePrice: 750 },
@@ -1129,14 +1206,30 @@ export const AdminDashboard = () => {
 
           {/* 4.1 Match Scheduling & Fixture Generator Settings */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
-            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
-              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-emerald-400" />
-                <span>Match Scheduling & Fixture Generator</span>
-              </CardTitle>
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                  <Calendar className="w-5 h-5 text-emerald-400" />
+                  <span>Match Scheduling & Fixture Generator</span>
+                </CardTitle>
+                <p className="text-xs text-slate-400 mt-1">
+                  Schedule matches manually or auto-generate Round-Robin tournament fixtures.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleGenerateAutoFixtures}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 h-10 rounded-xl shadow-lg flex items-center space-x-2 shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Generate Tournament Fixtures (Auto)</span>
+              </Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid md:grid-cols-3 gap-4">
+
+            <CardContent className="p-6 space-y-6">
+              {/* Rules Configuration */}
+              <div className="grid md:grid-cols-3 gap-4 pb-4 border-b border-slate-800">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-slate-300">Default Match Duration (Mins)</label>
                   <Input 
@@ -1165,14 +1258,142 @@ export const AdminDashboard = () => {
                   />
                 </div>
               </div>
-              <div className="flex justify-end pt-2">
-                <Button 
-                  onClick={() => toast.success('Tournament Match Rules saved!')}
-                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Match Rules
-                </Button>
+
+              {/* 2. Manual Match Creation Form */}
+              <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  <span>Manual Match Creation Form</span>
+                </h4>
+
+                <form onSubmit={handleCreateManualMatch} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Home Team</label>
+                    <select
+                      value={newMatch.homeTeamId}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, homeTeamId: e.target.value }))}
+                      className="w-full h-10 bg-slate-900 border border-slate-700 rounded-xl px-3 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Home Team --</option>
+                      {teamsList.map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Away Team</label>
+                    <select
+                      value={newMatch.awayTeamId}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, awayTeamId: e.target.value }))}
+                      className="w-full h-10 bg-slate-900 border border-slate-700 rounded-xl px-3 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Away Team --</option>
+                      {teamsList.map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Round Name</label>
+                    <Input
+                      value={newMatch.round}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, round: e.target.value }))}
+                      placeholder="e.g. Group Stage, Semi Final, Final"
+                      className="h-10 bg-slate-900 border-slate-700 text-white text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Match Type</label>
+                    <select
+                      value={newMatch.type}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full h-10 bg-slate-900 border border-slate-700 rounded-xl px-3 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="SINGLE">Single Match</option>
+                      <option value="LEGGED">Two-Legged Tie</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Scheduled Date & Time</label>
+                    <Input
+                      type="datetime-local"
+                      value={newMatch.scheduledTime}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                      className="h-10 bg-slate-900 border-slate-700 text-white text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-400">Venue / Stadium Name</label>
+                    <Input
+                      value={newMatch.venue}
+                      onChange={(e) => setNewMatch(prev => ({ ...prev, venue: e.target.value }))}
+                      placeholder="e.g. Central Stadium"
+                      className="h-10 bg-slate-900 border-slate-700 text-white text-xs font-semibold"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 md:col-span-3 flex justify-end pt-2">
+                    <Button
+                      type="submit"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 h-10 rounded-xl shadow-lg flex items-center space-x-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Schedule New Match</span>
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              {/* 3. Scheduled Fixtures Directory */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">
+                    Scheduled Matches ({fixturesList.length})
+                  </h4>
+                </div>
+
+                {fixturesList.length === 0 ? (
+                  <div className="p-6 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-slate-500 text-xs">
+                    No tournament matches scheduled yet. Click "Generate Tournament Fixtures" or use the form above to schedule a match.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+                    {fixturesList.map((m: any) => (
+                      <div key={m.id} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-slate-900 text-slate-300 border-slate-700 text-[10px] px-2">
+                              {m.round || 'Group Stage'}
+                            </Badge>
+                            <Badge className="bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px]">
+                              {m.status}
+                            </Badge>
+                          </div>
+                          <p className="font-bold text-sm text-white truncate">
+                            <span className="text-emerald-400">{m.homeTeam?.name || 'Home'}</span> vs <span className="text-blue-400">{m.awayTeam?.name || 'Away'}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {m.venue || 'Main Stadium'} • {m.scheduledTime ? new Date(m.scheduledTime).toLocaleString() : 'TBD'}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMatch(m.id)}
+                          className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors shrink-0 cursor-pointer"
+                          title="Delete Match Fixture"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

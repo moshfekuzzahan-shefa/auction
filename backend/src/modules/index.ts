@@ -31,6 +31,7 @@ router.use('/config', configRoutes);
 router.use('/player', playerRoutes);
 router.use('/teams', teamRoutes);
 router.use('/tournament', tournamentRoutes);
+router.use('/matches', tournamentRoutes);
 router.use('/reset', resetRoutes);
 router.use('/auction', auctionRoutes);
 // router.use('/tournament', tournamentRoutes);

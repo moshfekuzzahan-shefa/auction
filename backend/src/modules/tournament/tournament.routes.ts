@@ -7,11 +7,16 @@ const router = Router();
 
 // Public routes (or spectator)
 router.get('/fixtures', TournamentController.getFixtures);
+router.get('/matches', TournamentController.getFixtures);
 router.get('/standings', TournamentController.getStandings);
 router.get('/stats/players', TournamentController.getPlayerStats);
 
 // Super Admin / Admin routes
 router.post('/fixtures', authenticate, authorize('SUPER_ADMIN'), TournamentController.createFixture);
+router.post('/matches', authenticate, authorize('SUPER_ADMIN'), TournamentController.createFixture);
+router.post('/generate-fixtures', authenticate, authorize('SUPER_ADMIN'), TournamentController.generateAutoFixtures);
+router.delete('/fixtures/:id', authenticate, authorize('SUPER_ADMIN'), TournamentController.deleteFixture);
+router.delete('/matches/:id', authenticate, authorize('SUPER_ADMIN'), TournamentController.deleteFixture);
 router.post('/matches/:id/events', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), TournamentController.logEvent);
 router.patch('/matches/:id/status', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), TournamentController.updateStatus);
 
