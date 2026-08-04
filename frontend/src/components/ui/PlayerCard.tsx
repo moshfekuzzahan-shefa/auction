@@ -99,24 +99,18 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect (Matches Watermark Bounds Exactly 210px) */}
+      {/* LAYER 3: Player Card Image Avatar (Enlarged w-48 h-48 sm:w-52 sm:h-52 completely covering watermark) */}
       <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2 bg-transparent">
-        <div className="w-[210px] h-[210px] sm:w-[210px] sm:h-[210px] rounded-full overflow-hidden border-2 border-white/25 shadow-2xl ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/70 relative">
-          {rawPhotoUrl ? (
-            <img 
-              src={rawPhotoUrl} 
-              alt={player.user?.name || 'Player Avatar'} 
-              className="w-full h-full object-cover object-center scale-110 transition-transform duration-500 group-hover:scale-125"
-              loading="lazy"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <svg className="w-32 h-32 text-slate-700 fill-current mt-6" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-          )}
+        <div className="relative mx-auto w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-xl flex items-center justify-center bg-zinc-800">
+          <img 
+            src={rawPhotoUrl || "/default-avatar.png"} 
+            alt={player.user?.name || player.name || "Player"} 
+            className="w-full h-full object-cover scale-110"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+            }}
+          />
         </div>
       </div>
 
