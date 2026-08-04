@@ -24,14 +24,25 @@ export const AuctionPodium = ({
 }: AuctionPodiumProps) => {
   const [bidPulse, setBidPulse] = useState(false);
   const [bidHistory, setBidHistory] = useState<Array<{ teamName: string; amount: number; time: string }>>([]);
+  const [isSubmittingBid, setIsSubmittingBid] = useState(false);
+  const [optimisticBid, setOptimisticBid] = useState<number | null>(null);
 
   const currentPlayer = auctionState?.currentPlayer;
-  const currentBid = auctionState?.currentBid || 0;
+  const rawCurrentBid = auctionState?.currentBid || 0;
+  const currentBid = optimisticBid !== null && optimisticBid > rawCurrentBid ? optimisticBid : rawCurrentBid;
   const timer = auctionState?.timer ?? 30;
   const status = auctionState?.status || 'IDLE';
   const currentLeaderId = auctionState?.currentLeaderId;
   const incrementType = auctionState?.incrementType || 'PERCENT';
   const incrementValue = auctionState?.incrementValue || 10;
+
+  // Clear optimistic state when official socket state updates
+  useEffect(() => {
+    if (optimisticBid !== null && rawCurrentBid >= optimisticBid) {
+      setOptimisticBid(null);
+      setIsSubmittingBid(false);
+    }
+  }, [rawCurrentBid]);
 
   const computedIncrement = incrementType === 'FIXED' 
     ? (incrementValue || 100) 
@@ -40,6 +51,19 @@ export const AuctionPodium = ({
   const calculatedNextBid = currentLeaderId 
     ? Math.max(currentBid + Math.max(computedIncrement, 1), auctionState?.nextValidBid || (currentBid + Math.max(computedIncrement, 1)))
     : (auctionState?.nextValidBid || currentBid);
+
+  const handlePlaceBidClick = (bidAmount: number) => {
+    if (isSubmittingBid || !onPlaceBid) return;
+    
+    setIsSubmittingBid(true);
+    setOptimisticBid(bidAmount);
+    onPlaceBid(bidAmount);
+
+    // Safety timeout to reset debounce if server doesn't respond
+    setTimeout(() => {
+      setIsSubmittingBid(false);
+    }, 400);
+  };
 
   const categoryTheme = getCategoryTheme(currentPlayer?.category?.name);
   const leadingTeam = teams.find((t) => t.id === currentLeaderId);
@@ -276,10 +300,11 @@ export const AuctionPodium = ({
                 ) : (
                   <Button 
                     size="lg"
-                    onClick={() => onPlaceBid(calculatedNextBid)}
-                    className="w-full h-12 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 border border-emerald-400/40 cursor-pointer active:scale-95 transition-all"
+                    disabled={isSubmittingBid}
+                    onClick={() => handlePlaceBidClick(calculatedNextBid)}
+                    className={`w-full h-12 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 border border-emerald-400/40 cursor-pointer active:scale-95 transition-all ${isSubmittingBid ? 'opacity-75 cursor-wait' : ''}`}
                   >
-                    <Zap className="w-4 h-4 text-amber-300" />
+                    <Zap className={`w-4 h-4 text-amber-300 ${isSubmittingBid ? 'animate-spin' : ''}`} />
                     <span>
                       {currentLeaderId 
                         ? `Raise Bid (${incrementType === 'FIXED' ? `+$${(incrementValue || 100).toLocaleString()}` : `+${incrementValue || 10}%`} → $${calculatedNextBid.toLocaleString()})`
