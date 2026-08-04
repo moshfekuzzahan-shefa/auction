@@ -62,9 +62,7 @@ export const RegistrationPage = () => {
     }
   });
 
-  const [isProcessingBg, setIsProcessingBg] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.primaryPos) {
@@ -77,24 +75,6 @@ export const RegistrationPage = () => {
       return;
     }
 
-    let finalImageFile: File = image;
-    setIsProcessingBg(true);
-    const toastId = toast.loading('Processing transparent cutout...');
-
-    try {
-      const { removeBackground } = await import('@imgly/background-removal');
-      const blob = await removeBackground(image, {
-        output: { format: 'image/png', quality: 1 }
-      });
-      finalImageFile = new File([blob], 'cutout.png', { type: 'image/png' });
-      toast.success('Transparent cutout generated!', { id: toastId });
-    } catch (err) {
-      console.warn('Background removal failed, uploading original photo:', err);
-      toast.dismiss(toastId);
-    } finally {
-      setIsProcessingBg(false);
-    }
-
     const form = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (key === 'secondaryPos') {
@@ -103,7 +83,7 @@ export const RegistrationPage = () => {
         form.append(key, value as string);
       }
     });
-    form.append('image', finalImageFile);
+    form.append('image', image);
     
     registerMutation.mutate(form);
   };

@@ -99,25 +99,22 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Instant Player Image Container (Zero Lag, Zero CPU Spike) */}
+      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect */}
       <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2 bg-transparent">
-        {rawPhotoUrl ? (
-          <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-white/20 ring-4 ring-slate-950/80 shadow-2xl relative mb-4">
+        <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-white/20 shadow-lg ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/60 relative">
+          {rawPhotoUrl ? (
             <img 
               src={rawPhotoUrl} 
               alt={player.user?.name} 
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-center scale-110 transition-transform duration-500 group-hover:scale-125"
               loading="lazy"
             />
-          </div>
-        ) : (
-          /* Default Silhouette Placeholder */
-          <div className="w-44 h-52 bg-slate-950/80 rounded-t-full border border-white/10 flex items-end justify-center shadow-2xl overflow-hidden relative opacity-70">
-            <svg className="w-36 h-44 text-slate-800 fill-current" viewBox="0 0 24 24">
+          ) : (
+            <svg className="w-24 h-24 text-slate-700 fill-current mt-4" viewBox="0 0 24 24">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Top & Bottom Dark Overlay Gradients */}
