@@ -178,26 +178,30 @@ export const PlayerTeamsDirectoryPage = () => {
                 </div>
 
                 {!selectedTeam.players || selectedTeam.players.length === 0 ? (
-                  <div className="p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-slate-400 text-sm">
-                    No players assigned or drafted to this team roster yet.
+                  <div className="p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-slate-400 text-sm flex flex-col items-center justify-center space-y-2">
+                    <Users className="w-8 h-8 text-slate-600" />
+                    <span>No players acquired yet in this team roster.</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
                     {selectedTeam.players.map((p: any) => {
                       const theme = getCategoryTheme(p.category?.name);
                       const playerName = p.user?.name || p.name || 'Player';
+                      const jersey = p.jerseyName ? `#${p.jerseyName}` : '';
                       const avatarUrl = p.imageUrl || '/default-avatar.png';
                       const pos = p.primaryPos || 'CM';
                       const secondaries = Array.isArray(p.secondaryPos) ? p.secondaryPos.join(', ') : p.secondaryPos;
                       const price = p.soldPrice || p.basePrice || 0;
+                      const studentId = p.studentId || 'N/A';
+                      const session = p.session || 'N/A';
 
                       return (
                         <div 
                           key={p.id} 
-                          className={`p-3.5 rounded-xl border bg-slate-950 flex items-center justify-between gap-3 shadow-md hover:border-slate-700 transition-all ${theme.border}`}
+                          className={`p-4 rounded-xl border bg-slate-950 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all ${theme.border}`}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-700/80 bg-zinc-800 shrink-0 flex items-center justify-center">
+                          <div className="flex items-start gap-3">
+                            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-slate-700 bg-zinc-800 shrink-0 flex items-center justify-center shadow-md">
                               <img 
                                 src={avatarUrl} 
                                 alt={playerName} 
@@ -206,24 +210,39 @@ export const PlayerTeamsDirectoryPage = () => {
                               />
                             </div>
 
-                            <div className="space-y-0.5">
-                              <p className="font-bold text-sm text-white">{playerName}</p>
-                              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                                <span className="font-bold text-emerald-400">{pos}</span>
-                                {secondaries && <span className="text-[10px] text-slate-500">({secondaries})</span>}
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-extrabold text-sm text-white truncate">{playerName}</p>
+                                {jersey && <span className="font-mono text-xs font-bold text-slate-400">{jersey}</span>}
+                              </div>
+
+                              <div className="text-[11px] text-slate-400 space-y-0.5 font-medium">
+                                <div><span className="text-slate-500 font-semibold">Student ID:</span> {studentId}</div>
+                                <div><span className="text-slate-500 font-semibold">Session:</span> {session}</div>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            {p.category && (
-                              <Badge variant="outline" className={`${theme.badge} text-[10px] font-bold px-2 py-0.5`}>
-                                {p.category.name}
+                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-mono font-bold text-[10px] px-2">
+                                {pos}
                               </Badge>
-                            )}
-                            {price > 0 && (
-                              <span className="font-mono text-xs font-bold text-emerald-400">${price.toLocaleString()}</span>
-                            )}
+                              {secondaries && (
+                                <span className="text-[10px] text-slate-400 font-semibold">({secondaries})</span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {p.category && (
+                                <Badge variant="outline" className={`${theme.badge} text-[10px] font-bold px-2 py-0.5`}>
+                                  {p.category.name}
+                                </Badge>
+                              )}
+                              <span className="font-mono text-xs font-black text-emerald-400">
+                                ${price.toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );

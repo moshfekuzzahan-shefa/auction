@@ -35,6 +35,9 @@ export class PublicService {
           select: {
             id: true,
             imageUrl: true,
+            jerseyName: true,
+            studentId: true,
+            session: true,
             primaryPos: true,
             secondaryPos: true,
             soldPrice: true,
