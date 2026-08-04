@@ -243,28 +243,59 @@ export class PlayerService {
         : 'Your Category Tier was reset to Unassigned Tier.';
     }
 
-    // 3. Safe DB Update in try-catch
+    // 3. Build Prisma Update Payload using nested relation connect/disconnect
+    const updateData: any = {
+      hasUnreadAdminUpdates: true,
+      lastAdminChange: changeMsg,
+    };
+
+    if (validCategoryId !== undefined) {
+      if (validCategoryId) {
+        updateData.category = { connect: { id: validCategoryId } };
+      } else {
+        updateData.category = { disconnect: true };
+      }
+    }
+
+    if (basePrice !== undefined) {
+      updateData.basePrice = basePrice;
+    }
+
+    if (data.primaryPos) {
+      updateData.primaryPos = String(data.primaryPos).trim();
+    }
+
+    if (data.secondaryPos !== undefined) {
+      updateData.secondaryPos = Array.isArray(data.secondaryPos) 
+        ? data.secondaryPos 
+        : String(data.secondaryPos).split(',').map((s: string) => s.trim());
+    }
+
+    if (data.studentId) {
+      updateData.studentId = String(data.studentId).trim();
+    }
+
+    if (data.session) {
+      updateData.session = String(data.session).trim();
+    }
+
+    if (data.jerseyName) {
+      updateData.jerseyName = String(data.jerseyName).trim();
+    }
+
+    // 4. Safe DB Update in try-catch using nested relation syntax
     try {
       return await prisma.profile.update({
         where: { id: targetProfileId },
-        data: {
-          hasUnreadAdminUpdates: true,
-          lastAdminChange: changeMsg,
-          ...(validCategoryId !== undefined ? { categoryId: validCategoryId } : {}),
-          ...(basePrice !== undefined ? { basePrice } : {}),
-          ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
-          ...(data.secondaryPos !== undefined ? { secondaryPos: Array.isArray(data.secondaryPos) ? data.secondaryPos : data.secondaryPos.split(',') } : {}),
-          ...(data.studentId ? { studentId: data.studentId } : {}),
-          ...(data.session ? { session: data.session } : {}),
-          ...(data.jerseyName ? { jerseyName: data.jerseyName } : {}),
-        },
+        data: updateData,
         include: {
           user: { select: { name: true, email: true } },
-          category: true
+          category: true,
+          team: { select: { name: true } }
         }
       });
     } catch (dbError: any) {
-      console.error('Failed in prisma.profile.update:', dbError);
+      console.error('Failed in prisma.profile.update with connect/disconnect relation syntax:', dbError);
       throw new Error(`Database error updating category: ${dbError.message}`);
     }
   }
