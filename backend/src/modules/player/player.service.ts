@@ -185,27 +185,47 @@ export class PlayerService {
   }
 
   static async adminUpdateProfile(profileId: string, data: any) {
-    const profile = await prisma.profile.findUnique({ where: { id: profileId } });
+    if (!profileId) throw new Error('Profile ID is required.');
+
+    // 1. Resolve Profile by id or userId
+    let profile = await prisma.profile.findUnique({ where: { id: profileId } });
+    if (!profile) {
+      profile = await prisma.profile.findUnique({ where: { userId: profileId } });
+    }
     if (!profile) throw new Error('Player profile not found.');
+
+    const targetProfileId = profile.id;
 
     let basePrice: number | null | undefined = undefined;
     let validCategoryId: string | null | undefined = undefined;
 
+    // 2. Parse & Sanitize Category parameter
     if (data.categoryId !== undefined) {
-      if (!data.categoryId || data.categoryId === 'null' || data.categoryId === 'unassigned') {
+      const rawCat = data.categoryId;
+      if (!rawCat || rawCat === 'null' || rawCat === 'unassigned' || rawCat === '') {
         validCategoryId = null;
         basePrice = null;
       } else {
-        let category = await prisma.playerCategory.findUnique({ where: { id: data.categoryId } });
+        let categoryInput = String(rawCat).trim();
+        if (categoryInput.includes('(')) {
+          categoryInput = categoryInput.split('(')[0].trim();
+        }
+        if (categoryInput.toLowerCase().endsWith('tier')) {
+          categoryInput = categoryInput.replace(/tier/i, '').trim();
+        }
+
+        // Try matching by UUID ID first
+        let category = await prisma.playerCategory.findUnique({ where: { id: categoryInput } }).catch(() => null);
         
+        // If not found by ID, match by Name (case-insensitive)
         if (!category) {
           category = await prisma.playerCategory.findFirst({
-            where: { name: { equals: data.categoryId, mode: 'insensitive' } }
+            where: { name: { equals: categoryInput, mode: 'insensitive' } }
           });
         }
 
         if (!category) {
-          throw new Error(`Invalid Category ID provided: "${data.categoryId}". Category tier does not exist in database.`);
+          throw new Error(`Invalid Category Tier provided: "${data.categoryId}". Category does not exist in database.`);
         }
 
         validCategoryId = category.id;
@@ -223,24 +243,30 @@ export class PlayerService {
         : 'Your Category Tier was reset to Unassigned Tier.';
     }
 
-    return prisma.profile.update({
-      where: { id: profileId },
-      data: {
-        hasUnreadAdminUpdates: true,
-        lastAdminChange: changeMsg,
-        ...(validCategoryId !== undefined ? { categoryId: validCategoryId } : {}),
-        ...(basePrice !== undefined ? { basePrice } : {}),
-        ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
-        ...(data.secondaryPos !== undefined ? { secondaryPos: Array.isArray(data.secondaryPos) ? data.secondaryPos : data.secondaryPos.split(',') } : {}),
-        ...(data.studentId ? { studentId: data.studentId } : {}),
-        ...(data.session ? { session: data.session } : {}),
-        ...(data.jerseyName ? { jerseyName: data.jerseyName } : {}),
-      },
-      include: {
-        user: { select: { name: true, email: true } },
-        category: true
-      }
-    });
+    // 3. Safe DB Update in try-catch
+    try {
+      return await prisma.profile.update({
+        where: { id: targetProfileId },
+        data: {
+          hasUnreadAdminUpdates: true,
+          lastAdminChange: changeMsg,
+          ...(validCategoryId !== undefined ? { categoryId: validCategoryId } : {}),
+          ...(basePrice !== undefined ? { basePrice } : {}),
+          ...(data.primaryPos ? { primaryPos: data.primaryPos } : {}),
+          ...(data.secondaryPos !== undefined ? { secondaryPos: Array.isArray(data.secondaryPos) ? data.secondaryPos : data.secondaryPos.split(',') } : {}),
+          ...(data.studentId ? { studentId: data.studentId } : {}),
+          ...(data.session ? { session: data.session } : {}),
+          ...(data.jerseyName ? { jerseyName: data.jerseyName } : {}),
+        },
+        include: {
+          user: { select: { name: true, email: true } },
+          category: true
+        }
+      });
+    } catch (dbError: any) {
+      console.error('Failed in prisma.profile.update:', dbError);
+      throw new Error(`Database error updating category: ${dbError.message}`);
+    }
   }
 
   static async markAdminUpdatesAsRead(userId: string) {
