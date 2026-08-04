@@ -13,8 +13,13 @@ export const PlayerTeamsDirectoryPage = () => {
   const { data: landingData, isLoading: landingLoading } = useQuery({
     queryKey: ['public', 'landing'],
     queryFn: async () => {
-      const res = await api.get('/public/landing');
-      return res.data.data;
+      try {
+        const res = await api.get('/public/landing');
+        const payload = res.data?.data || res.data;
+        return payload?.teams || payload?.data?.teams || [];
+      } catch {
+        return [];
+      }
     }
   });
 
@@ -23,7 +28,11 @@ export const PlayerTeamsDirectoryPage = () => {
     queryFn: async () => {
       try {
         const res = await api.get('/teams');
-        return res.data.data || res.data;
+        const raw = res.data;
+        const list = Array.isArray(raw) 
+          ? raw 
+          : (Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw?.teams) ? raw.teams : (raw?.data?.teams || [])));
+        return list;
       } catch (err) {
         return [];
       }
@@ -32,7 +41,7 @@ export const PlayerTeamsDirectoryPage = () => {
 
   const teams = (teamsData && Array.isArray(teamsData) && teamsData.length > 0)
     ? teamsData 
-    : (landingData?.teams || []);
+    : (landingData && Array.isArray(landingData) ? landingData : (landingData?.teams || []));
 
   const isLoading = landingLoading && teamsLoading;
 

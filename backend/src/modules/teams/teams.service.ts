@@ -70,7 +70,10 @@ export class TeamsService {
       include: {
         manager: { select: { name: true, email: true } },
         players: {
-          include: { user: { select: { name: true } } }
+          include: {
+            category: { select: { name: true, basePrice: true } },
+            user: { select: { name: true } }
+          }
         }
       },
       orderBy: { name: 'asc' }

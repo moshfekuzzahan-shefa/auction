@@ -15,8 +15,8 @@ router.put('/requests/:id/verify', authenticate, authorize('SUPER_ADMIN'), Teams
 // Super Admin creates teams
 router.post('/create', authenticate, authorize('SUPER_ADMIN'), upload.single('logo'), TeamsController.registerTeam);
 
-// Any authenticated user can get active teams
-router.get('/', authenticate, TeamsController.getTeams);
+// Get active teams (Public)
+router.get('/', TeamsController.getTeams);
 
 // Protect specific team manager routes
 router.use(authenticate, authorize('TEAM_MANAGER'));
