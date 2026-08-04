@@ -4,39 +4,29 @@ import logger from './logger';
 
 export const seedSuperAdmin = async () => {
   try {
-    const superAdminExists = await prisma.user.findFirst({
-      where: { role: 'SUPER_ADMIN' }
-    });
-
+    const superAdminExists = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
     if (!superAdminExists) {
       const email = process.env.SUPER_ADMIN_EMAIL || 'admin@football.com';
       const password = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
       const hashedPassword = await bcrypt.hash(password, 10);
-
       await prisma.user.create({
-        data: {
-          name: 'Super Admin',
-          email,
-          password: hashedPassword,
-          role: 'SUPER_ADMIN'
-        }
+        data: { name: 'Super Admin', email, password: hashedPassword, role: 'SUPER_ADMIN' }
       });
       logger.info('Super Admin seeded successfully');
     }
+  } catch (err) { logger.error('Super Admin seed error:', err); }
 
+  try {
     const systemStateExists = await prisma.systemState.findFirst();
     if (!systemStateExists) {
       await prisma.systemState.create({
-        data: {
-          currentPhase: 'SETUP',
-          totalBudget: 10000,
-          minRoster: 11
-        }
+        data: { currentPhase: 'SETUP', totalBudget: 10000, minRoster: 11 }
       });
       logger.info('System State seeded successfully');
     }
+  } catch (err) { logger.error('System State seed error:', err); }
 
-    // Seed Default Academic Sessions if empty
+  try {
     const sessionsCount = await prisma.academicSession.count();
     if (sessionsCount === 0) {
       const defaultSessions = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026'];
@@ -46,8 +36,9 @@ export const seedSuperAdmin = async () => {
       });
       logger.info('Academic Sessions seeded successfully');
     }
+  } catch (err) { logger.error('Academic Sessions seed error:', err); }
 
-    // Seed Default Player Positions if empty
+  try {
     const positionsCount = await prisma.playerPosition.count();
     if (positionsCount === 0) {
       const defaultPositions = [
@@ -61,14 +52,12 @@ export const seedSuperAdmin = async () => {
         { code: 'RW', name: 'Right Wing' },
         { code: 'ST', name: 'Striker' },
       ];
-      await prisma.playerPosition.createMany({
-        data: defaultPositions,
-        skipDuplicates: true
-      });
+      await prisma.playerPosition.createMany({ data: defaultPositions, skipDuplicates: true });
       logger.info('Player Positions seeded successfully');
     }
+  } catch (err) { logger.error('Player Positions seed error:', err); }
 
-    // Seed Default Player Categories if empty
+  try {
     const categoriesCount = await prisma.playerCategory.count();
     if (categoriesCount === 0) {
       const defaultCategories = [
@@ -77,14 +66,12 @@ export const seedSuperAdmin = async () => {
         { name: 'Silver', basePrice: 500 },
         { name: 'Bronze', basePrice: 250 },
       ];
-      await prisma.playerCategory.createMany({
-        data: defaultCategories,
-        skipDuplicates: true
-      });
+      await prisma.playerCategory.createMany({ data: defaultCategories, skipDuplicates: true });
       logger.info('Player Categories seeded successfully');
     }
+  } catch (err) { logger.error('Player Categories seed error:', err); }
 
-    // Seed Default Bid Rules if empty
+  try {
     const rulesCount = await prisma.bidRaiseRule.count();
     if (rulesCount === 0) {
       const defaultRules = [
@@ -92,31 +79,23 @@ export const seedSuperAdmin = async () => {
         { minPrice: 1001, maxPrice: 5000, incrementType: 'PERCENT' as const, incrementValue: 5 },
         { minPrice: 5001, maxPrice: 100000, incrementType: 'FIXED' as const, incrementValue: 500 },
       ];
-      await prisma.bidRaiseRule.createMany({
-        data: defaultRules
-      });
+      await prisma.bidRaiseRule.createMany({ data: defaultRules });
       logger.info('Bid Raise Rules seeded successfully');
     }
+  } catch (err) { logger.error('Bid Raise Rules seed error:', err); }
 
-    // Seed Podium Admin if not exists
-    const podiumAdminExists = await prisma.user.findFirst({
-      where: { role: 'PODIUM_ADMIN' }
-    });
-
+  try {
+    const podiumAdminExists = await prisma.user.findFirst({ where: { role: 'PODIUM_ADMIN' } });
     if (!podiumAdminExists) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
       await prisma.user.create({
-        data: {
-          name: 'The Auctioneer',
-          email: 'podium@football.com',
-          password: hashedPassword,
-          role: 'PODIUM_ADMIN'
-        }
+        data: { name: 'The Auctioneer', email: 'podium@football.com', password: hashedPassword, role: 'PODIUM_ADMIN' }
       });
       logger.info('Podium Admin seeded successfully');
     }
+  } catch (err) { logger.error('Podium Admin seed error:', err); }
 
-    // Seed Default Franchises (Teams) & Team Managers
+  try {
     const teamsCount = await prisma.team.count();
     if (teamsCount === 0) {
       const defaultTeams = [
@@ -129,27 +108,23 @@ export const seedSuperAdmin = async () => {
       const hashedPassword = await bcrypt.hash('admin123', 10);
 
       for (const t of defaultTeams) {
-        const manager = await prisma.user.create({
-          data: {
-            name: t.managerName,
-            email: t.email,
-            password: hashedPassword,
-            role: 'TEAM_MANAGER'
-          }
+        const existingManager = await prisma.user.findUnique({ where: { email: t.email } });
+        const manager = existingManager || await prisma.user.create({
+          data: { name: t.managerName, email: t.email, password: hashedPassword, role: 'TEAM_MANAGER' }
         });
 
-        await prisma.team.create({
-          data: {
-            name: t.name,
-            budget: 10000,
-            managerId: manager.id
-          }
-        });
+        const existingTeam = await prisma.team.findUnique({ where: { name: t.name } });
+        if (!existingTeam) {
+          await prisma.team.create({
+            data: { name: t.name, budget: 10000, managerId: manager.id }
+          });
+        }
       }
       logger.info('Sample Teams & Team Managers seeded successfully');
     }
+  } catch (err) { logger.error('Sample Teams seed error:', err); }
 
-    // Seed Sample Unsold Players for Auction Pool
+  try {
     const playersCount = await prisma.profile.count();
     if (playersCount === 0) {
       const categories = await prisma.playerCategory.findMany();
@@ -176,32 +151,29 @@ export const seedSuperAdmin = async () => {
         const catId = catMap.get(p.catName) || categories[0]?.id;
         const catObj = categories.find(c => c.id === catId);
 
-        const user = await prisma.user.create({
-          data: {
-            name: p.name,
-            email: p.email,
-            password: defaultPassword,
-            role: 'PLAYER'
-          }
+        const existingUser = await prisma.user.findUnique({ where: { email: p.email } });
+        const user = existingUser || await prisma.user.create({
+          data: { name: p.name, email: p.email, password: defaultPassword, role: 'PLAYER' }
         });
 
-        await prisma.profile.create({
-          data: {
-            userId: user.id,
-            studentId: p.studentId,
-            session: p.session,
-            jerseyName: p.jerseyName,
-            primaryPos: p.primaryPos,
-            secondaryPos: p.secondaryPos,
-            categoryId: catId,
-            basePrice: catObj ? catObj.basePrice : 500,
-            isSold: false
-          }
-        });
+        const existingProfile = await prisma.profile.findUnique({ where: { userId: user.id } });
+        if (!existingProfile) {
+          await prisma.profile.create({
+            data: {
+              userId: user.id,
+              studentId: p.studentId,
+              session: p.session,
+              jerseyName: p.jerseyName,
+              primaryPos: p.primaryPos,
+              secondaryPos: p.secondaryPos,
+              categoryId: catId,
+              basePrice: catObj ? catObj.basePrice : 500,
+              isSold: false
+            }
+          });
+        }
       }
       logger.info('Sample Unsold Players seeded successfully');
     }
-  } catch (error) {
-    logger.error('Error seeding database', error);
-  }
+  } catch (err) { logger.error('Sample Players seed error:', err); }
 };
