@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Button } from '../../components/ui/Button';
 import { Dialog, DialogContent } from '../../components/ui/Dialog';
 import { Shield, Users, Trophy } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
@@ -9,6 +10,7 @@ import api from '../../services/api';
 
 export const PlayerTeamsDirectoryPage = () => {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const { data: landingData, isLoading: landingLoading } = useQuery({
     queryKey: ['public', 'landing'],
@@ -87,7 +89,10 @@ export const PlayerTeamsDirectoryPage = () => {
             return (
               <Card 
                 key={t.id}
-                onClick={() => setSelectedTeam(t)}
+                onClick={() => {
+                  setSelectedTeam(t);
+                  setIsModalOpen(true);
+                }}
                 className="bg-slate-900/90 border-slate-800 hover:border-emerald-500/50 shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 overflow-hidden group"
               >
                 <CardContent className="p-6 space-y-4">
@@ -123,10 +128,18 @@ export const PlayerTeamsDirectoryPage = () => {
                     </div>
                   )}
 
-                  <div className="pt-2 flex items-center justify-between text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
+                  <Button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTeam(t);
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full mt-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-md"
+                  >
                     <span>View Roster & Player Profiles</span>
-                    <span>→</span>
-                  </div>
+                    <span className="text-sm font-bold">→</span>
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -135,7 +148,7 @@ export const PlayerTeamsDirectoryPage = () => {
       )}
 
       {/* Team Details Modal with Player Profile List */}
-      <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
+      <Dialog open={isModalOpen && !!selectedTeam} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setSelectedTeam(null); }}>
         <DialogContent className="sm:max-w-3xl bg-slate-900 border-slate-800 text-white shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
           {selectedTeam && (
             <div className="space-y-6">
