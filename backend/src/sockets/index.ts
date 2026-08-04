@@ -83,61 +83,94 @@ export const setupSockets = (httpServer: HttpServer) => {
     // Send current state on connect
     auctionEngine.broadcastState(socket);
 
-    // --- Admin Events ---
-    socket.on('PODIUM_PULL_PLAYER', (data) => {
+    // Helper to send errors to client
+    const sendError = (msg: string) => {
+      socket.emit('ERROR', msg);
+      socket.emit('error', msg);
+    };
+
+    // Helper to send success to client
+    const sendSuccess = (msg: string) => {
+      socket.emit('SUCCESS', msg);
+      socket.emit('success', msg);
+    };
+
+    // --- Admin Event Handlers ---
+    const handlePodiumPull = async (data: any) => {
       logger.info(`Received PODIUM_PULL_PLAYER from ${socket.id}, role: ${socket.data.user?.role}, data: ${JSON.stringify(data)}`);
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
+        const system = await prisma.systemState.findFirst();
+        if (system && system.currentPhase !== 'AUCTION') {
+          sendError(`Auction phase is not active! Current phase is '${system.currentPhase}'. Please change phase to AUCTION in System Config.`);
+          return;
+        }
         auctionEngine.startAuction(data.playerId, data.mode, data.basePrice, data.timerSeconds).catch(err => {
           logger.error('Error starting auction:', err);
-          socket.emit('ERROR', err.message);
+          sendError(err.message || 'Failed to start auction');
         });
+      } else {
+        sendError('Unauthorized: Only Podium Admins or Super Admins can pull players onto the stage.');
       }
-    });
+    };
 
-    socket.on('EXTEND_TIMER', (data) => {
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+    const handleExtendTimer = (data: any) => {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
         auctionEngine.extendTimer(Number(data?.seconds) || 10);
       }
-    });
+    };
 
-    socket.on('OVERRIDE_PAUSE', () => {
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+    const handlePause = () => {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
         auctionEngine.pause();
       }
-    });
+    };
 
-    socket.on('OVERRIDE_RESUME', () => {
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+    const handleResume = () => {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
         auctionEngine.resume();
       }
-    });
+    };
 
-    socket.on('OVERRIDE_CANCEL', () => {
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+    const handleCancel = () => {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
         auctionEngine.cancel();
       }
-    });
+    };
 
-    socket.on('OVERRIDE_ROLLBACK', async (data) => {
-      if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
+    const handleRollback = async (data: any) => {
+      const role = socket.data.user?.role;
+      if (role === 'PODIUM_ADMIN' || role === 'SUPER_ADMIN') {
         try {
           await auctionEngine.rollback(data.ledgerId);
-          socket.emit('SUCCESS', 'Rollback complete');
+          sendSuccess('Rollback complete');
         } catch (err: any) {
-          socket.emit('ERROR', err.message);
+          sendError(err.message || 'Rollback failed');
         }
       }
-    });
+    };
 
-    socket.on('TOGGLE_BID_MODE', (data) => {
-       if (socket.data.user?.role === 'PODIUM_ADMIN' || socket.data.user?.role === 'SUPER_ADMIN') {
-         auctionEngine.toggleBidMode(data.mode);
-       }
-    });
-
-    // --- Team Manager Bidding Event ---
-    socket.on('PLACE_BID', async (data) => {
+    // --- Team Manager Bidding Event Handler ---
+    const handlePlaceBid = async (data: any) => {
       try {
+        // System Phase Check
+        const system = await prisma.systemState.findFirst();
+        if (system && system.currentPhase !== 'AUCTION') {
+          sendError(`Live bidding is disabled! Current system phase is '${system.currentPhase}'.`);
+          return;
+        }
+
+        // Authorization Role Check
+        const role = socket.data.user?.role;
+        if (role !== 'TEAM_MANAGER' && role !== 'SUPER_ADMIN' && role !== 'PODIUM_ADMIN') {
+          sendError('Unauthorized! Only Team Managers can place bids in the auction.');
+          return;
+        }
+
         let teamId = socket.data.user?.teamId || data?.teamId;
 
         // Dynamic fallback lookup if teamId was not resolved on handshake
@@ -153,26 +186,52 @@ export const setupSockets = (httpServer: HttpServer) => {
         }
 
         if (!teamId) {
-          socket.emit('ERROR', 'No franchise team is assigned to your manager account!');
+          sendError('No franchise team is assigned to your manager account!');
           return;
         }
 
         const amount = Number(data?.amount);
         if (!amount || isNaN(amount) || amount <= 0) {
-          socket.emit('ERROR', 'Invalid bid amount specified');
+          sendError('Invalid bid amount specified');
           return;
         }
 
         auctionEngine.placeBid(teamId, amount, socket);
       } catch (err: any) {
-        socket.emit('ERROR', err.message || 'Failed to place bid');
+        sendError(err.message || 'Failed to place bid');
       }
-    });
+    };
 
-    socket.on('JOIN_AUCTION_ROOM', () => {
+    const handleJoinAuction = () => {
       socket.join('auction_spectators');
       auctionEngine.broadcastState(socket);
-    });
+    };
+
+    // Event Registration with Dual Event Names (UPPERCASE & snake_case)
+    socket.on('PODIUM_PULL_PLAYER', handlePodiumPull);
+    socket.on('podium_pull_player', handlePodiumPull);
+
+    socket.on('EXTEND_TIMER', handleExtendTimer);
+    socket.on('extend_timer', handleExtendTimer);
+
+    socket.on('OVERRIDE_PAUSE', handlePause);
+    socket.on('pause_auction', handlePause);
+
+    socket.on('OVERRIDE_RESUME', handleResume);
+    socket.on('resume_auction', handleResume);
+
+    socket.on('OVERRIDE_CANCEL', handleCancel);
+    socket.on('cancel_auction', handleCancel);
+
+    socket.on('OVERRIDE_ROLLBACK', handleRollback);
+    socket.on('rollback_auction', handleRollback);
+
+    socket.on('PLACE_BID', handlePlaceBid);
+    socket.on('place_bid', handlePlaceBid);
+
+    socket.on('JOIN_AUCTION_ROOM', handleJoinAuction);
+    socket.on('join_auction_room', handleJoinAuction);
+    socket.on('join_auction', handleJoinAuction);
 
     socket.on('disconnect', () => {
       logger.info(`Client disconnected: ${socket.id}`);

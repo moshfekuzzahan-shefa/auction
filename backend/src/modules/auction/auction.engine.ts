@@ -216,6 +216,7 @@ export class AuctionEngine {
           this.timer = 30; // Reset to 30s
           
           this.io.emit('BID_PLACED', { teamId, amount });
+          this.io.emit('bid_placed', { teamId, amount });
           this.broadcastState();
         });
 
@@ -223,13 +224,21 @@ export class AuctionEngine {
         await prisma.$transaction(async (tx) => {
           const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
           if (!isValid) {
-            if (senderSocket) senderSocket.emit('ERROR', error);
+            if (senderSocket) {
+              senderSocket.emit('ERROR', error);
+              senderSocket.emit('error', error);
+            }
             this.io.to(`team_${teamId}`).emit('ERROR', error);
+            this.io.to(`team_${teamId}`).emit('error', error);
             return;
           }
           this.blindBids.set(teamId, amount);
-          if (senderSocket) senderSocket.emit('SUCCESS', 'Blind bid registered');
+          if (senderSocket) {
+            senderSocket.emit('SUCCESS', 'Blind bid registered');
+            senderSocket.emit('success', 'Blind bid registered');
+          }
           this.io.to(`team_${teamId}`).emit('SUCCESS', 'Blind bid registered');
+          this.io.to(`team_${teamId}`).emit('success', 'Blind bid registered');
         });
       }
     });
@@ -243,6 +252,7 @@ export class AuctionEngine {
       if (this.timer > 0) {
         this.timer--;
         this.io.emit('TIMER_TICK', { timer: this.timer });
+        this.io.emit('timer_tick', { timer: this.timer });
       } else {
         await this.endAuction();
       }
@@ -315,8 +325,10 @@ export class AuctionEngine {
           });
         });
         this.io.emit('PLAYER_SOLD', { winnerId, finalAmount, playerId: this.currentPlayerId });
+        this.io.emit('player_sold', { winnerId, finalAmount, playerId: this.currentPlayerId });
       } else {
         this.io.emit('PLAYER_UNSOLD', { result: 'UNSOLD', playerId: this.currentPlayerId });
+        this.io.emit('player_unsold', { result: 'UNSOLD', playerId: this.currentPlayerId });
       }
       this.broadcastState();
     });
@@ -452,8 +464,10 @@ export class AuctionEngine {
 
     if (targetSocket) {
       targetSocket.emit('AUCTION_STATE', payload);
+      targetSocket.emit('auction_state', payload);
     } else {
       this.io.emit('AUCTION_STATE', payload);
+      this.io.emit('auction_state', payload);
     }
   }
 }
