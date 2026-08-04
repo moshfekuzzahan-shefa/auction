@@ -196,14 +196,14 @@ export class PlayerService {
 
     const targetProfileId = profile.id;
 
+    let categoryRecord: any = null;
     let basePrice: number | null | undefined = undefined;
-    let validCategoryId: string | null | undefined = undefined;
 
-    // 2. Parse & Sanitize Category parameter
+    // 2. Parse & Sanitize Category parameter via PlayerCategory lookup
     if (data.categoryId !== undefined) {
       const rawCat = data.categoryId;
       if (!rawCat || rawCat === 'null' || rawCat === 'unassigned' || rawCat === '') {
-        validCategoryId = null;
+        categoryRecord = null;
         basePrice = null;
       } else {
         let categoryInput = String(rawCat).trim();
@@ -214,34 +214,28 @@ export class PlayerService {
           categoryInput = categoryInput.replace(/tier/i, '').trim();
         }
 
-        // Try matching by UUID ID first
-        let category = await prisma.playerCategory.findUnique({ where: { id: categoryInput } }).catch(() => null);
-        
-        // If not found by ID, match by Name (case-insensitive)
-        if (!category) {
-          category = await prisma.playerCategory.findFirst({
-            where: { name: { equals: categoryInput, mode: 'insensitive' } }
-          });
+        categoryRecord = await prisma.playerCategory.findFirst({
+          where: {
+            OR: [
+              { id: categoryInput },
+              { name: { equals: categoryInput, mode: 'insensitive' } }
+            ]
+          }
+        });
+
+        if (!categoryRecord) {
+          throw new Error(`Invalid category specified: "${data.categoryId}". Category tier does not exist in database.`);
         }
 
-        if (!category) {
-          throw new Error(`Invalid Category Tier provided: "${data.categoryId}". Category does not exist in database.`);
-        }
-
-        validCategoryId = category.id;
-        basePrice = category.basePrice;
+        basePrice = categoryRecord.basePrice;
       }
     } else if (data.basePrice !== undefined) {
-      basePrice = data.basePrice;
+      basePrice = Number(data.basePrice);
     }
 
-    let changeMsg = 'Admin updated your profile details.';
-    if (validCategoryId !== undefined) {
-      const catObj = validCategoryId ? await prisma.playerCategory.findUnique({ where: { id: validCategoryId } }) : null;
-      changeMsg = catObj 
-        ? `Your Category Tier was updated to ${catObj.name} ($${catObj.basePrice})` 
-        : 'Your Category Tier was reset to Unassigned Tier.';
-    }
+    const changeMsg = categoryRecord 
+      ? `Your Category Tier was updated to ${categoryRecord.name} ($${categoryRecord.basePrice})` 
+      : (data.categoryId !== undefined ? 'Your Category Tier was reset to Unassigned Tier.' : 'Admin updated your profile details.');
 
     // 3. Build Prisma Update Payload using nested relation connect/disconnect
     const updateData: any = {
@@ -249,11 +243,17 @@ export class PlayerService {
       lastAdminChange: changeMsg,
     };
 
-    if (validCategoryId !== undefined) {
-      if (validCategoryId) {
-        updateData.category = { connect: { id: validCategoryId } };
+    if (data.categoryId !== undefined) {
+      if (categoryRecord) {
+        updateData.category = {
+          connect: { id: categoryRecord.id }
+        };
+        updateData.basePrice = categoryRecord.basePrice;
       } else {
-        updateData.category = { disconnect: true };
+        updateData.category = {
+          disconnect: true
+        };
+        updateData.basePrice = null;
       }
     }
 
