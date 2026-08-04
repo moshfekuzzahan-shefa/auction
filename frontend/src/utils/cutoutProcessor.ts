@@ -1,13 +1,19 @@
-import { removeBackground } from '@imgly/background-removal';
+import { removeBackground, type Config } from '@imgly/background-removal';
 
-// In-memory cache for processed cutout blob URLs
+// In-memory cache for processed cutout blob URLs with PNG Alpha Transparency
 const cutoutCache = new Map<string, string>();
 const processingPromises = new Map<string, Promise<string | null>>();
 
+const config: Config = {
+  output: {
+    format: 'image/png', // Must output PNG for alpha channel transparency
+    quality: 1, // Full quality
+  }
+};
+
 /**
- * Gets a transparent PNG cutout URL for a player image.
- * Uses Cloudinary background removal transformation if available,
- * or falls back to client-side @imgly/background-removal processing.
+ * Processes player image using @imgly/background-removal to generate a true 
+ * transparent PNG cutout (Alpha channel) so the dynamic card gradient shows behind.
  */
 export async function getPlayerCutout(imageUrl: string): Promise<string | null> {
   if (!imageUrl) return null;
@@ -17,37 +23,23 @@ export async function getPlayerCutout(imageUrl: string): Promise<string | null> 
     return cutoutCache.get(imageUrl)!;
   }
 
-  // 2. If already processing this image, return the existing promise
+  // 2. If already processing this image, return existing promise
   if (processingPromises.has(imageUrl)) {
     return processingPromises.get(imageUrl)!;
   }
 
-  // 3. Check Cloudinary URL fast-path
-  if (imageUrl.includes('res.cloudinary.com')) {
-    const cloudinaryCutoutUrl = imageUrl.includes('e_background_removal')
-      ? imageUrl
-      : imageUrl.replace('/upload/', '/upload/e_background_removal/');
-    
-    cutoutCache.set(imageUrl, cloudinaryCutoutUrl);
-    return cloudinaryCutoutUrl;
-  }
-
-  // 4. Client-Side @imgly/background-removal processing
+  // 3. Process via @imgly/background-removal for true alpha channel transparency
   const processPromise = (async () => {
     try {
-      // Set a 12-second timeout fail-safe
+      // 15-second fail-safe timeout
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error('Cutout processing timed out')), 12000)
+        setTimeout(() => reject(new Error('Background removal processing timed out')), 15000)
       );
 
       const removalPromise = (async () => {
-        const imageBlob = await removeBackground(imageUrl, {
-          output: {
-            format: 'image/png',
-            quality: 0.85
-          }
-        });
-        return URL.createObjectURL(imageBlob);
+        const imageBlob = await removeBackground(imageUrl, config);
+        const transparentImageUrl = URL.createObjectURL(imageBlob);
+        return transparentImageUrl;
       })();
 
       const resultUrl = await Promise.race([removalPromise, timeoutPromise]);
@@ -57,7 +49,7 @@ export async function getPlayerCutout(imageUrl: string): Promise<string | null> 
       }
       return null;
     } catch (error) {
-      console.warn('Client-side background removal fallback to raw image:', error);
+      console.error('Background removal failed:', error);
       return null;
     } finally {
       processingPromises.delete(imageUrl);

@@ -67,35 +67,31 @@ export const PlayerCard = ({
   const jerseyNum = player.jerseyName || (player.studentId ? player.studentId.slice(-2) : '10');
   const rawPhotoUrl = player.imageUrl || player.publicId;
 
-  // Background Removal Cutout Processing State
-  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  // Background Removal Cutout Processing State (Alpha Channel Transparency)
+  const [processedImg, setProcessedImg] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(!!rawPhotoUrl);
-  const [hasCutoutError, setHasCutoutError] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
     if (!rawPhotoUrl) {
       setIsProcessing(false);
+      setProcessedImg(null);
       return;
     }
 
     setIsProcessing(true);
-    setHasCutoutError(false);
 
     getPlayerCutout(rawPhotoUrl)
-      .then((url) => {
+      .then((transparentImageUrl) => {
         if (isMounted) {
-          if (url) {
-            setCutoutUrl(url);
-          } else {
-            setHasCutoutError(true);
-          }
+          setProcessedImg(transparentImageUrl || rawPhotoUrl);
           setIsProcessing(false);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Background removal failed:", error);
         if (isMounted) {
-          setHasCutoutError(true);
+          setProcessedImg(rawPhotoUrl);
           setIsProcessing(false);
         }
       });
@@ -139,33 +135,28 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Centered Transparent Cutout Subject Image with Overflow & Fallback */}
-      <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2">
+      {/* LAYER 3: Transparent PNG Cutout (Alpha Channel Overlaying Card Gradient) */}
+      <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2 bg-transparent">
         {isProcessing ? (
           /* Loading Skeletal Shimmer & Spinner */
           <div className="flex flex-col items-center justify-center space-y-2">
-            <div className="w-40 h-52 bg-slate-900/60 rounded-t-full border border-white/10 animate-pulse flex items-center justify-center shadow-xl">
+            <div className="w-40 h-52 bg-slate-900/40 rounded-t-full border border-white/10 animate-pulse flex items-center justify-center shadow-xl backdrop-blur-sm">
               <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
             </div>
-            <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase animate-pulse">Processing...</span>
+            <span className="text-[10px] font-bold text-emerald-300 tracking-widest uppercase animate-pulse drop-shadow">Removing Background...</span>
           </div>
-        ) : cutoutUrl && !hasCutoutError ? (
-          /* Transparent Cutout with 3D Depth Overflow */
+        ) : processedImg ? (
+          /* Transparent PNG Cutout Overlaying Dynamic Card Gradient */
           <img 
-            src={cutoutUrl} 
+            src={processedImg} 
             alt={player.user?.name} 
-            className="w-52 h-60 object-contain object-bottom scale-110 -translate-y-2 group-hover:scale-115 transition-transform duration-500 drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
-            onError={() => setHasCutoutError(true)}
+            className="w-52 h-60 object-contain object-bottom scale-110 -translate-y-2 group-hover:scale-115 transition-transform duration-500 bg-transparent drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
+            onError={() => {
+              if (processedImg !== rawPhotoUrl) {
+                setProcessedImg(rawPhotoUrl);
+              }
+            }}
           />
-        ) : rawPhotoUrl ? (
-          /* Fail-Safe Circular Avatar Fallback Container */
-          <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-emerald-400/50 ring-4 ring-slate-950/80 shadow-2xl relative mb-4">
-            <img 
-              src={rawPhotoUrl} 
-              alt={player.user?.name} 
-              className="w-full h-full object-cover object-center"
-            />
-          </div>
         ) : (
           /* Default Silhouette Placeholder */
           <div className="w-44 h-52 bg-slate-950/80 rounded-t-full border border-white/10 flex items-end justify-center shadow-2xl overflow-hidden relative opacity-70">
