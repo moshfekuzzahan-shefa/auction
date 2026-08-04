@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { 
   Plus, Trash2, Shield, Save, Settings, Users, Calendar, DollarSign, 
   Link2, Copy, ExternalLink, AlertTriangle, Crown, Trophy, PlayCircle,
-  UserCheck, Flame, ChevronRight, Gavel, Clock, ListOrdered, Activity, Award
+  UserCheck, Flame, ChevronRight, Gavel, Clock, ListOrdered, Activity, Award, Megaphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -83,6 +83,8 @@ export const AdminDashboard = () => {
     }
   });
 
+  const [announcementText, setAnnouncementText] = useState<string>('IPL & FUT Style Live Auction Podium');
+
   // Keep internal state in sync with fetched system state initially
   useEffect(() => {
     if (systemState) {
@@ -90,6 +92,9 @@ export const AdminDashboard = () => {
         totalBudget: systemState.totalBudget, 
         minRoster: systemState.minRoster 
       });
+      if (systemState.announcement !== undefined) {
+        setAnnouncementText(systemState.announcement || '');
+      }
       setScheduleConfig({
         registrationStart: systemState.registrationStart ? new Date(systemState.registrationStart).toISOString().slice(0, 16) : '',
         registrationEnd: systemState.registrationEnd ? new Date(systemState.registrationEnd).toISOString().slice(0, 16) : '',
@@ -321,6 +326,46 @@ export const AdminDashboard = () => {
               >
                 Set System to SETUP Phase
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Public Page Custom Announcement Banner */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Megaphone className="w-5 h-5 text-emerald-400" />
+                <span>Public Page Top Header Announcement</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Set a custom broadcast announcement title to be displayed live at the top of the public landing and live auction pages.
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-slate-300">Public Header Announcement Text</label>
+                <Input 
+                  value={announcementText}
+                  onChange={(e) => setAnnouncementText(e.target.value)}
+                  placeholder="e.g. IPL & FUT Style Live Auction Podium"
+                  className="bg-slate-950 border-slate-700 text-white font-semibold text-sm h-11"
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => {
+                    api.put('/system/announcement', { announcement: announcementText })
+                      .then(() => {
+                        toast.success('Public Header Announcement updated live!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to update announcement'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Header Announcement
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

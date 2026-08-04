@@ -61,7 +61,7 @@ export const LandingPage = () => {
       case 'REGISTRATION':
         return <RegistrationOpenView message={payload.message} data={payload.data} schedule={payload.schedule} />;
       case 'AUCTION':
-        return <LiveAuctionPublicPodium message={payload.message} data={payload.data} schedule={payload.schedule} isReadOnly={true} />;
+        return <LiveAuctionPublicPodium message={payload.message} announcement={payload.announcement} data={payload.data} schedule={payload.schedule} isReadOnly={true} />;
       case 'TOURNAMENT':
         return <TournamentDashboardView message={payload.message} data={payload.data} />;
       default:

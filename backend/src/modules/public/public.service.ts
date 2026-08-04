@@ -13,6 +13,7 @@ export class PublicService {
     const basePayload = {
       phase,
       message: '',
+      announcement: system.announcement || 'IPL & FUT Style Live Auction Podium',
       schedule: {
         registrationStart: system.registrationStart,
         registrationEnd: system.registrationEnd,

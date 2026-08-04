@@ -52,6 +52,16 @@ export class SystemController {
     }
   }
 
+  static async setAnnouncement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { announcement } = req.body;
+      const updatedState = await SystemService.updateAnnouncement(announcement || '');
+      return sendSuccessResponse({ res, message: 'Public Announcement updated successfully', data: updatedState });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+    }
+  }
+
   static async updateCategories(req: Request, res: Response, next: NextFunction) {
     try {
       const { categories } = req.body;

@@ -37,6 +37,14 @@ router.put(
   SystemController.setSchedule
 );
 
+// Super Admin Only: Set public announcement
+router.put(
+  '/announcement',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  SystemController.setAnnouncement
+);
+
 // Super Admin Only: Update Categories
 router.put(
   '/categories',

@@ -165,6 +165,7 @@ model SystemState {
   registrationEnd   DateTime?
   auctionStart      DateTime?
   auctionEnd        DateTime?
+  announcement      String?  @default("IPL & FUT Style Live Auction Podium")
 
   updatedAt    DateTime @updatedAt
 }

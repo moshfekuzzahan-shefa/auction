@@ -37,6 +37,14 @@ export class SystemService {
     });
   }
 
+  static async updateAnnouncement(announcement: string) {
+    const state = await this.getSystemState();
+    return prisma.systemState.update({
+      where: { id: state.id },
+      data: { announcement }
+    });
+  }
+
   static async updateCategories(categories: { id: string; basePrice: number }[]) {
     return prisma.$transaction(
       categories.map(cat => 

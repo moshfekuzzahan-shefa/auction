@@ -10,6 +10,7 @@ import api from '../../../services/api';
 
 interface LiveAuctionPublicPodiumProps {
   message?: string;
+  announcement?: string;
   data: any;
   schedule?: {
     registrationStart?: string;
@@ -20,7 +21,7 @@ interface LiveAuctionPublicPodiumProps {
   isReadOnly?: boolean;
 }
 
-export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuctionPublicPodiumProps) => {
+export const LiveAuctionPublicPodium = ({ message, announcement, data, schedule }: LiveAuctionPublicPodiumProps) => {
   const { socket } = useSocketContext();
   const [auctionState, setAuctionState] = useState<any>(null);
 
@@ -86,13 +87,15 @@ export const LiveAuctionPublicPodium = ({ message, data, schedule }: LiveAuction
     return { pt, au, ag, cu };
   };
 
+  const headerAnnouncement = announcement || data?.announcement || "IPL & FUT Style Live Auction Podium";
+
   return (
     <div className="space-y-8 animate-in fade-in-50 slide-in-from-bottom-4">
       <div className="text-center space-y-3">
         <Badge variant="destructive" className="animate-pulse px-4 py-1.5 text-xs font-black uppercase tracking-widest bg-red-600 border border-red-400">
           <Activity className="w-4 h-4 mr-2 inline-block" /> Live Broadcast Mode
         </Badge>
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">IPL & FUT Style Live Auction Podium</h2>
+        <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">{headerAnnouncement}</h2>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm">
           {message || "Real-time bids, tactical radar stats, and broadcast telemetry stream."}
         </p>
