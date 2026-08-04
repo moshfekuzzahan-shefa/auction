@@ -237,47 +237,47 @@ export class PlayerService {
       ? `Your Category Tier was updated to ${categoryRecord.name} ($${categoryRecord.basePrice})` 
       : (data.categoryId !== undefined ? 'Your Category Tier was reset to Unassigned Tier.' : 'Admin updated your profile details.');
 
-    // 3. Build Prisma Update Payload using PRIMITIVE scalar values
-    const updateData: any = {
-      hasUnreadAdminUpdates: true,
-      lastAdminChange: changeMsg,
-    };
-
+    // 3. Execute DB update safely
     if (data.categoryId !== undefined) {
-      updateData.categoryId = categoryRecord ? categoryRecord.id : null;
-      updateData.basePrice = basePrice;
-    } else if (basePrice !== undefined) {
-      updateData.basePrice = basePrice;
+      const catIdToSet = categoryRecord ? categoryRecord.id : null;
+      const priceToSet = basePrice !== undefined ? basePrice : null;
+
+      await prisma.$executeRaw`
+        UPDATE "Profile"
+        SET "categoryId" = ${catIdToSet},
+            "basePrice" = ${priceToSet},
+            "hasUnreadAdminUpdates" = true,
+            "lastAdminChange" = ${changeMsg}
+        WHERE "id" = ${targetProfileId}
+      `;
+    } else {
+      const updateData: any = {
+        hasUnreadAdminUpdates: true,
+        lastAdminChange: changeMsg,
+      };
+
+      if (basePrice !== undefined) updateData.basePrice = basePrice;
+      if (data.primaryPos) updateData.primaryPos = String(data.primaryPos).trim();
+      if (data.secondaryPos !== undefined) {
+        updateData.secondaryPos = Array.isArray(data.secondaryPos) 
+          ? data.secondaryPos 
+          : String(data.secondaryPos).split(',').map((s: string) => s.trim());
+      }
+      if (data.studentId) updateData.studentId = String(data.studentId).trim();
+      if (data.session) updateData.session = String(data.session).trim();
+      if (data.jerseyName) updateData.jerseyName = String(data.jerseyName).trim();
+
+      await prisma.profile.update({
+        where: { id: targetProfileId },
+        data: updateData
+      });
     }
 
-    if (data.primaryPos) {
-      updateData.primaryPos = String(data.primaryPos).trim();
-    }
-
-    if (data.secondaryPos !== undefined) {
-      updateData.secondaryPos = Array.isArray(data.secondaryPos) 
-        ? data.secondaryPos 
-        : String(data.secondaryPos).split(',').map((s: string) => s.trim());
-    }
-
-    if (data.studentId) {
-      updateData.studentId = String(data.studentId).trim();
-    }
-
-    if (data.session) {
-      updateData.session = String(data.session).trim();
-    }
-
-    if (data.jerseyName) {
-      updateData.jerseyName = String(data.jerseyName).trim();
-    }
-
-    // 4. Directly update profile using primitive scalar values
-    return await prisma.profile.update({
+    // 4. Return full updated profile record with relations
+    return await prisma.profile.findUnique({
       where: { id: targetProfileId },
-      data: updateData,
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, role: true } },
         category: true,
         team: { select: { name: true } }
       }
