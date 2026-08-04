@@ -21,13 +21,32 @@ export const PlayerSchedulesPage = () => {
     }
   });
 
-  const { data: landingData, isLoading } = useQuery({
-    queryKey: ['public', 'landing'],
+  const { data: apiMatches, isLoading: matchesLoading } = useQuery({
+    queryKey: ['matches', 'all'],
     queryFn: async () => {
-      const res = await api.get('/public/landing');
-      return res.data.data;
+      try {
+        const res = await api.get('/matches');
+        const raw = res.data;
+        return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : (raw?.matches || []));
+      } catch {
+        return [];
+      }
     }
   });
+
+  const { data: landingData, isLoading: landingLoading } = useQuery({
+    queryKey: ['public', 'landing'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/public/landing');
+        return res.data?.data || res.data;
+      } catch {
+        return null;
+      }
+    }
+  });
+
+  const isLoading = matchesLoading && landingLoading;
 
   if (isLoading) {
     return (
@@ -37,12 +56,16 @@ export const PlayerSchedulesPage = () => {
     );
   }
 
-  const matchesData = landingData?.matches || {};
-  const allMatches: any[] = [
-    ...(matchesData.live || []),
-    ...(matchesData.upcoming || []),
-    ...(matchesData.finished || [])
+  const landingMatchesData = landingData?.matches || {};
+  const landingMatches: any[] = [
+    ...(landingMatchesData.live || []),
+    ...(landingMatchesData.upcoming || []),
+    ...(landingMatchesData.finished || [])
   ];
+
+  const allMatches: any[] = (apiMatches && Array.isArray(apiMatches) && apiMatches.length > 0)
+    ? apiMatches
+    : landingMatches;
 
   const myTeamId = myProfile?.team?.id;
 
@@ -90,7 +113,7 @@ export const PlayerSchedulesPage = () => {
             onClick={() => setActiveTab('live')}
             className="px-3 rounded-xl text-xs font-bold text-red-400"
           >
-            Live Matches ({matchesData.live?.length || 0})
+            Live Matches ({allMatches.filter((m: any) => m.status === 'LIVE').length})
           </Button>
           <Button 
             variant={activeTab === 'finished' ? 'primary' : 'ghost'} 

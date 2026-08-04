@@ -94,7 +94,7 @@ export class TournamentService {
         homeTeam: true,
         awayTeam: true
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { scheduledTime: 'asc' }
     });
   }
 

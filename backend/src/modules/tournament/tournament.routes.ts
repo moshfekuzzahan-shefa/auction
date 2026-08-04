@@ -5,7 +5,12 @@ import { authenticate } from '../../middleware/auth.middleware';
 
 const router = Router();
 
-// Public routes (or spectator)
+// Root handlers for /api/matches and /api/tournament
+router.get('/', TournamentController.getFixtures);
+router.post('/', authenticate, authorize('SUPER_ADMIN'), TournamentController.createFixture);
+router.delete('/:id', authenticate, authorize('SUPER_ADMIN'), TournamentController.deleteFixture);
+
+// Named sub-routes
 router.get('/fixtures', TournamentController.getFixtures);
 router.get('/matches', TournamentController.getFixtures);
 router.get('/standings', TournamentController.getStandings);
