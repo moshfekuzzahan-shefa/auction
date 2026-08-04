@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 let databaseUrl = process.env.DATABASE_URL;
 
 if (databaseUrl) {
-  if (databaseUrl.includes('pooler') || databaseUrl.includes('6543') || databaseUrl.includes('supabase')) {
+  if (databaseUrl.includes('6543') || databaseUrl.includes('pgbouncer=true')) {
     if (!databaseUrl.includes('pgbouncer=true')) {
       databaseUrl += databaseUrl.includes('?') ? '&pgbouncer=true' : '?pgbouncer=true';
     }

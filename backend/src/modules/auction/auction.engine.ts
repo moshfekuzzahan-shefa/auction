@@ -185,6 +185,13 @@ export class AuctionEngine {
       if (this.mode === 'NORMAL') {
         const { nextValidBid } = await this.calculateNextBid();
 
+        if (this.currentLeaderId === teamId) {
+          const errMsg = 'Your team is already the highest bidder!';
+          if (senderSocket) senderSocket.emit('ERROR', errMsg);
+          this.io.to(`team_${teamId}`).emit('ERROR', errMsg);
+          return;
+        }
+
         if (this.currentLeaderId && amount < nextValidBid) {
           const errMsg = `Bid increment too low. Next valid bid must be at least $${nextValidBid.toLocaleString()}`;
           if (senderSocket) senderSocket.emit('ERROR', errMsg);
