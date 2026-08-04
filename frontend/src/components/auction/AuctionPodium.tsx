@@ -31,6 +31,8 @@ export const AuctionPodium = ({
   const status = auctionState?.status || 'IDLE';
   const currentLeaderId = auctionState?.currentLeaderId;
   const nextValidBid = auctionState?.nextValidBid || currentBid + 50;
+  const incrementType = auctionState?.incrementType || 'PERCENT';
+  const incrementValue = auctionState?.incrementValue || 10;
 
   const categoryTheme = getCategoryTheme(currentPlayer?.category?.name);
   const leadingTeam = teams.find((t) => t.id === currentLeaderId);
@@ -261,7 +263,9 @@ export const AuctionPodium = ({
                   className="w-full h-12 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 border border-emerald-400/40"
                 >
                   <Zap className="w-4 h-4 text-amber-300" />
-                  <span>Raise Bid to ${nextValidBid.toLocaleString()}</span>
+                  <span>
+                    Raise Bid ({incrementType === 'FIXED' ? `+$${(incrementValue || 100).toLocaleString()}` : `+${incrementValue || 10}%`} → ${nextValidBid.toLocaleString()})
+                  </span>
                   <ArrowUpRight className="w-4 h-4" />
                 </Button>
               </div>

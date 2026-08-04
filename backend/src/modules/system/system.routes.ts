@@ -53,6 +53,9 @@ router.put(
   SystemController.updateCategories
 );
 
+// Get Bidding Rules (Public/Admin)
+router.get('/rules', SystemController.getRules);
+
 // Super Admin Only: Update Bidding Rules
 router.put(
   '/rules',

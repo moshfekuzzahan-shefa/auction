@@ -122,7 +122,9 @@ export const LiveAuction = () => {
               disabled={nextValidBid > maxAllowableBid || auctionState.status !== 'ACTIVE'}
               className="w-full h-14 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-base rounded-xl shadow-lg shadow-emerald-950/50 flex items-center justify-center space-x-2 border border-emerald-400/30"
             >
-              <span>Place Bid (+10% / ${nextValidBid.toLocaleString()})</span>
+              <span>
+                Place Bid ({auctionState?.incrementType === 'FIXED' ? `+$${(auctionState?.incrementValue || 100).toLocaleString()}` : `+${auctionState?.incrementValue || 10}%`} / ${nextValidBid.toLocaleString()})
+              </span>
               <ArrowUpRight className="w-5 h-5" />
             </Button>
 

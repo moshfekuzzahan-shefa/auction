@@ -22,6 +22,14 @@ interface CategoryRow {
   basePrice: number | string;
 }
 
+interface SlabRuleRow {
+  id?: string;
+  minPrice: number;
+  maxPrice: number;
+  incrementType: 'PERCENT' | 'FIXED';
+  incrementValue: number;
+}
+
 export const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
@@ -84,6 +92,32 @@ export const AdminDashboard = () => {
   });
 
   const [announcementText, setAnnouncementText] = useState<string>('IPL & FUT Style Live Auction Podium');
+
+  const [slabRules, setSlabRules] = useState<SlabRuleRow[]>([
+    { minPrice: 0, maxPrice: 1000, incrementType: 'PERCENT', incrementValue: 10 },
+    { minPrice: 1001, maxPrice: 5000, incrementType: 'PERCENT', incrementValue: 5 },
+    { minPrice: 5001, maxPrice: 100000, incrementType: 'FIXED', incrementValue: 500 },
+  ]);
+
+  const { data: rulesData } = useQuery({
+    queryKey: ['system', 'rules'],
+    queryFn: async () => {
+      const res = await api.get('/system/rules');
+      return res.data.data;
+    }
+  });
+
+  useEffect(() => {
+    if (rulesData && Array.isArray(rulesData) && rulesData.length > 0) {
+      setSlabRules(rulesData.map((r: any) => ({
+        id: r.id,
+        minPrice: r.minPrice,
+        maxPrice: r.maxPrice,
+        incrementType: r.incrementType || 'PERCENT',
+        incrementValue: r.incrementValue || 10
+      })));
+    }
+  }, [rulesData]);
 
   // Keep internal state in sync with fetched system state initially
   useEffect(() => {
@@ -865,6 +899,126 @@ export const AdminDashboard = () => {
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Save Auction Schedule
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3.2 Price Range Slabs & Bid Increment Rules */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Gavel className="w-5 h-5 text-emerald-400" />
+                <span>Price Range Slabs & Bid Increment Rules</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Define player price range slabs and dynamic minimum percentage (%) or fixed ($) bid increment rules.
+              </p>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-12 gap-3 text-xs uppercase font-extrabold tracking-wider text-slate-400 px-1">
+                <div className="col-span-3">Min Price ($)</div>
+                <div className="col-span-3">Max Price ($)</div>
+                <div className="col-span-3">Increment Type</div>
+                <div className="col-span-2">Increment Value</div>
+                <div className="col-span-1 text-center">Action</div>
+              </div>
+
+              <div className="space-y-3">
+                {slabRules.map((row, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    <div className="col-span-3">
+                      <Input 
+                        type="number"
+                        value={row.minPrice}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setSlabRules(prev => prev.map((r, i) => i === idx ? { ...r, minPrice: val } : r));
+                        }}
+                        placeholder="0"
+                        className="h-10 bg-slate-900 border-slate-700 text-white font-mono text-xs rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Input 
+                        type="number"
+                        value={row.maxPrice}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setSlabRules(prev => prev.map((r, i) => i === idx ? { ...r, maxPrice: val } : r));
+                        }}
+                        placeholder="1000"
+                        className="h-10 bg-slate-900 border-slate-700 text-white font-mono text-xs rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <select
+                        value={row.incrementType}
+                        onChange={(e) => {
+                          const val = e.target.value as 'PERCENT' | 'FIXED';
+                          setSlabRules(prev => prev.map((r, i) => i === idx ? { ...r, incrementType: val } : r));
+                        }}
+                        className="w-full h-10 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg px-2"
+                      >
+                        <option value="PERCENT">Percentage (%)</option>
+                        <option value="FIXED">Fixed Amount ($)</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <Input 
+                        type="number"
+                        value={row.incrementValue}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setSlabRules(prev => prev.map((r, i) => i === idx ? { ...r, incrementValue: val } : r));
+                        }}
+                        placeholder="10"
+                        className="h-10 bg-slate-900 border-slate-700 text-emerald-400 font-mono font-bold text-xs rounded-lg"
+                      />
+                    </div>
+                    <div className="col-span-1 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setSlabRules(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                        title="Remove Rule"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const lastMax = slabRules.length > 0 ? slabRules[slabRules.length - 1].maxPrice : 0;
+                    setSlabRules(prev => [...prev, { minPrice: lastMax + 1, maxPrice: lastMax + 5000, incrementType: 'PERCENT', incrementValue: 10 }]);
+                  }}
+                  className="w-full sm:w-auto h-10 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold text-xs flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  <span>Add Price Slab Rule</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    api.put('/system/rules', { rules: slabRules })
+                      .then(() => {
+                        toast.success('Auction Price Range Slabs saved successfully!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save bid rules'));
+                  }}
+                  className="w-full sm:w-auto h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 rounded-xl shadow-lg flex items-center space-x-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Price Range Slabs</span>
                 </Button>
               </div>
             </CardContent>

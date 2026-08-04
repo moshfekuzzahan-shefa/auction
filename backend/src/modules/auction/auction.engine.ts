@@ -298,23 +298,44 @@ export class AuctionEngine {
     });
   }
 
-  public async calculateNextBid(): Promise<{ minimumRaise: number, nextValidBid: number }> {
-    if (this.status !== 'ACTIVE') return { minimumRaise: 0, nextValidBid: this.currentBid };
+  public async calculateNextBid(): Promise<{ minimumRaise: number, nextValidBid: number, incrementType: string, incrementValue: number }> {
+    if (this.status !== 'ACTIVE') return { minimumRaise: 0, nextValidBid: this.currentBid, incrementType: 'PERCENT', incrementValue: 10 };
 
-    // If no leader team has placed a bid yet, the initial bid can be the Base Price itself!
+    // If no leader team has placed a bid yet, initial bid is Base Price itself
     if (!this.currentLeaderId) {
-      return { minimumRaise: 0, nextValidBid: this.currentBid };
+      return { minimumRaise: 0, nextValidBid: this.currentBid, incrementType: 'PERCENT', incrementValue: 10 };
     }
 
-    // Dynamic 10% Increment Engine: Next Bid = Math.ceil(Current Bid * 1.10)
-    const minimumRaise = Math.ceil(this.currentBid * 0.10);
-    const nextValidBid = this.currentBid + minimumRaise;
+    const rules = await prisma.bidRaiseRule.findMany({
+      orderBy: { minPrice: 'asc' }
+    });
 
-    return { minimumRaise, nextValidBid };
+    let minimumRaise = Math.ceil(this.currentBid * 0.10);
+    let incrementType = 'PERCENT';
+    let incrementValue = 10;
+
+    if (rules.length > 0) {
+      const matchingRule = rules.find(r => this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice) 
+        || rules[rules.length - 1];
+
+      if (matchingRule) {
+        incrementType = (matchingRule as any).incrementType || 'PERCENT';
+        incrementValue = matchingRule.incrementValue || 10;
+
+        if (incrementType === 'PERCENT') {
+          minimumRaise = Math.ceil(this.currentBid * (incrementValue / 100));
+        } else {
+          minimumRaise = Math.ceil(incrementValue);
+        }
+      }
+    }
+
+    const nextValidBid = this.currentBid + minimumRaise;
+    return { minimumRaise, nextValidBid, incrementType, incrementValue };
   }
 
   public async broadcastState(targetSocket?: Socket) {
-    const { minimumRaise, nextValidBid } = await this.calculateNextBid();
+    const { minimumRaise, nextValidBid, incrementType, incrementValue } = await this.calculateNextBid();
 
     const system = await prisma.systemState.findFirst();
     const categories = await prisma.playerCategory.findMany({ orderBy: { basePrice: 'asc' } });
@@ -358,6 +379,8 @@ export class AuctionEngine {
       timer: this.timer,
       nextValidBid,
       minimumRaise,
+      incrementType,
+      incrementValue,
       minRoster: system?.minRoster || 11,
       lowestBasePrice,
       teams

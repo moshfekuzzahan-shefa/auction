@@ -56,18 +56,24 @@ export class SystemService {
     );
   }
 
-  static async updateRules(rules: { id?: string; minBudgetPercent: number; maxBudgetPercent: number; raisePercent: number }[]) {
-    // Overwrite all rules: delete existing and create new
+  static async getRules() {
+    return prisma.bidRaiseRule.findMany({
+      orderBy: { minPrice: 'asc' }
+    });
+  }
+
+  static async updateRules(rules: { id?: string; minPrice: number; maxPrice: number; incrementType: 'PERCENT' | 'FIXED'; incrementValue: number }[]) {
     return prisma.$transaction(async (tx) => {
       await tx.bidRaiseRule.deleteMany({});
       await tx.bidRaiseRule.createMany({
         data: rules.map(r => ({
-          minBudgetPercent: r.minBudgetPercent,
-          maxBudgetPercent: r.maxBudgetPercent,
-          raisePercent: r.raisePercent
+          minPrice: Number(r.minPrice),
+          maxPrice: Number(r.maxPrice),
+          incrementType: (r.incrementType as any) || 'PERCENT',
+          incrementValue: Number(r.incrementValue)
         }))
       });
-      return tx.bidRaiseRule.findMany();
+      return tx.bidRaiseRule.findMany({ orderBy: { minPrice: 'asc' } });
     });
   }
 }

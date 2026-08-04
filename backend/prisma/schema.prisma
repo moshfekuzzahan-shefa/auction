@@ -91,11 +91,18 @@ model AcademicSession {
   name String @unique
 }
 
+enum IncrementType {
+  PERCENT
+  FIXED
+}
+
 model BidRaiseRule {
-  id               String @id @default(uuid())
-  minBudgetPercent Float // e.g. 0.0
-  maxBudgetPercent Float // e.g. 0.03
-  raisePercent     Float // e.g. 0.0015 (0.15% of total budget)
+  id             String        @id @default(uuid())
+  minPrice       Float         @default(0)
+  maxPrice       Float         @default(100000)
+  incrementType  IncrementType @default(PERCENT)
+  incrementValue Float         @default(10)
+  createdAt      DateTime      @default(now())
 }
 
 enum TeamStatus {

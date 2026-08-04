@@ -76,6 +76,15 @@ export class SystemController {
     }
   }
 
+  static async getRules(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rules = await SystemService.getRules();
+      return sendSuccessResponse({ res, message: 'Bid raise rules retrieved', data: rules });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+    }
+  }
+
   static async updateRules(req: Request, res: Response, next: NextFunction) {
     try {
       const { rules } = req.body;
@@ -84,7 +93,7 @@ export class SystemController {
       }
 
       const updated = await SystemService.updateRules(rules);
-      return sendSuccessResponse({ res, message: 'Rules updated successfully', data: updated });
+      return sendSuccessResponse({ res, message: 'Bid raise rules updated successfully', data: updated });
     } catch (error: any) {
       return sendErrorResponse({ res, statusCode: 500, message: error.message });
     }
