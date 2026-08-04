@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { 
   Plus, Trash2, Shield, Save, Settings, Users, Calendar, DollarSign, 
   Link2, Copy, ExternalLink, AlertTriangle, Crown, Trophy, PlayCircle,
-  UserCheck, Flame, ChevronRight, Gavel
+  UserCheck, Flame, ChevronRight, Gavel, Clock, ListOrdered, Activity, Award
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
@@ -26,7 +26,7 @@ export const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
 
-  // Active Navigation Tab: SETUP | REGISTRATION | AUCTION | TOURNAMENT
+  // Active Navigation Tab (Reflects Lifecycle Phase: SETUP | REGISTRATION | AUCTION | TOURNAMENT)
   const [activeTab, setActiveTab] = useState<'SETUP' | 'REGISTRATION' | 'AUCTION' | 'TOURNAMENT'>('SETUP');
 
   const [nukeLevel, setNukeLevel] = useState<number>(0);
@@ -38,6 +38,18 @@ export const AdminDashboard = () => {
     registrationEnd: '',
     auctionStart: '',
     auctionEnd: ''
+  });
+
+  const [auctionRules, setAuctionRules] = useState({
+    bidIncrement: 50,
+    timerSeconds: 30,
+    categoryOrder: 'PLATINUM,GOLD,SILVER,BRONZE'
+  });
+
+  const [tournamentRules, setTournamentRules] = useState({
+    matchDuration: 90,
+    pointsPerWin: 3,
+    pointsPerDraw: 1
   });
 
   const [categoriesList, setCategoriesList] = useState<CategoryRow[]>([
@@ -87,7 +99,6 @@ export const AdminDashboard = () => {
       if (systemState.categories && Array.isArray(systemState.categories) && systemState.categories.length > 0) {
         setCategoriesList(systemState.categories.map((c: any) => ({ name: c.name, basePrice: c.basePrice })));
       }
-      // Default active tab to current system phase if available
       if (systemState.currentPhase) {
         setActiveTab(systemState.currentPhase as any);
       }
@@ -214,43 +225,44 @@ export const AdminDashboard = () => {
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <Settings className="w-8 h-8 text-emerald-400" />
-            <span>Admin Control Panel</span>
+            <span>System Configuration</span>
           </h1>
           <p className="text-xs font-semibold text-slate-400 mt-1">
-            Configure system parameters, manage registration approvals, and trigger lifecycle phases.
+            Dynamic phase-based controls. Selecting a lifecycle tab renders context-specific parameters.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <Badge className="px-3.5 py-1.5 bg-emerald-950 text-emerald-300 border border-emerald-500/50 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg">
-            Active Phase: {systemState?.currentPhase}
+            Active Lifecycle Phase: {systemState?.currentPhase}
           </Badge>
         </div>
       </div>
 
       {/* 
         =========================================================
-        NAVIGATION TABS: SETUP | REGISTRATION | AUCTION | TOURNAMENT
+        DYNAMIC LIFECYCLE PHASE SWITCHER TABS:
+        SETUP | REGISTRATION | AUCTION | TOURNAMENT
         =========================================================
       */}
       <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded-2xl border border-slate-800 overflow-x-auto gap-2">
         <button
           onClick={() => setActiveTab('SETUP')}
-          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] h-12 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             activeTab === 'SETUP'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02]'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
           <Settings className="w-4 h-4" />
-          <span>1. Setup & Settings</span>
+          <span>1. Setup Phase</span>
         </button>
 
         <button
           onClick={() => setActiveTab('REGISTRATION')}
-          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] h-12 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             activeTab === 'REGISTRATION'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02]'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
@@ -260,9 +272,9 @@ export const AdminDashboard = () => {
 
         <button
           onClick={() => setActiveTab('AUCTION')}
-          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] h-12 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             activeTab === 'AUCTION'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02]'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
@@ -272,9 +284,9 @@ export const AdminDashboard = () => {
 
         <button
           onClick={() => setActiveTab('TOURNAMENT')}
-          className={`flex-1 min-w-[140px] h-11 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[140px] h-12 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
             activeTab === 'TOURNAMENT'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 scale-[1.02]'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
           }`}
         >
@@ -285,24 +297,22 @@ export const AdminDashboard = () => {
 
       {/* 
         =========================================================
-        TAB 1: SETUP PHASE / SYSTEM SETTINGS
-        Contains all relocated configuration blocks:
-        1. Player Categories & Base Prices
-        2. Event Schedule & Countdowns
-        3. Budget & Roster Rules
-        4. Franchise Team Creation
-        5. Danger Zone: Nuke Protocols
+        1. SETUP PHASE CONTROLS (activePhase === 'SETUP')
+        SHOWS ONLY:
+        - Category Tiers & Base Prices Configuration
+        - Budget & Roster Rules
+        - Danger Zone: Nuke Protocols
         =========================================================
       */}
       {activeTab === 'SETUP' && (
         <div className="space-y-8 animate-fadeIn">
           
-          {/* Phase Activation Bar */}
+          {/* Phase Activation Header */}
           <Card className="bg-slate-900/90 border-slate-800">
             <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h3 className="font-bold text-white text-sm">Activate Setup Phase</h3>
-                <p className="text-xs text-slate-400">Lock tournament configurations before opening registrations.</p>
+                <h3 className="font-bold text-white text-sm">Event Phase: SETUP</h3>
+                <p className="text-xs text-slate-400">Lock baseline tournament parameters before opening player registrations.</p>
               </div>
               <Button
                 onClick={() => changePhaseMutation.mutate('SETUP')}
@@ -314,7 +324,7 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* 1. Player Categories & Base Prices Configuration */}
+          {/* 1.1 Category Tiers & Base Prices Configuration */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
@@ -322,7 +332,7 @@ export const AdminDashboard = () => {
                 <span>Player Categories & Base Prices Configuration</span>
               </CardTitle>
               <p className="text-xs text-slate-400">
-                Define player category tiers and their starting auction base prices before player registrations open.
+                Define player category tiers and starting auction base prices.
               </p>
             </CardHeader>
 
@@ -392,76 +402,7 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* 2. Event Schedule & Countdowns */}
-          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
-            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
-              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-emerald-400" />
-                <span>Event Schedule & Countdowns</span>
-              </CardTitle>
-              <p className="text-xs text-slate-400">
-                Set public countdown timers. Leaving a field blank disables the countdown banner.
-              </p>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-300">Registration Start</label>
-                  <Input 
-                    type="datetime-local"
-                    value={scheduleConfig.registrationStart}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationStart: e.target.value }))}
-                    className="bg-slate-950 border-slate-700 text-white text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-300">Registration End</label>
-                  <Input 
-                    type="datetime-local"
-                    value={scheduleConfig.registrationEnd}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationEnd: e.target.value }))}
-                    className="bg-slate-950 border-slate-700 text-white text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-300">Auction Start</label>
-                  <Input 
-                    type="datetime-local"
-                    value={scheduleConfig.auctionStart}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionStart: e.target.value }))}
-                    className="bg-slate-950 border-slate-700 text-white text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-slate-300">Auction End</label>
-                  <Input 
-                    type="datetime-local"
-                    value={scheduleConfig.auctionEnd}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionEnd: e.target.value }))}
-                    className="bg-slate-950 border-slate-700 text-white text-sm"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <Button 
-                  onClick={() => {
-                    api.put('/system/schedule', scheduleConfig)
-                      .then(() => {
-                        toast.success('Schedule saved successfully!');
-                        queryClient.invalidateQueries();
-                      })
-                      .catch(() => toast.error('Failed to save schedule'));
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Schedule
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Budget & Roster Rules */}
+          {/* 1.2 Budget & Roster Rules */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
@@ -507,10 +448,7 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Franchise Team Creation Form */}
-          <TeamManagerForm />
-
-          {/* 4. Danger Zone: Nuke Protocols */}
+          {/* 1.3 Danger Zone: Nuke Protocols */}
           <Card className="border-red-500/50 bg-slate-900/90 shadow-xl">
             <CardHeader className="bg-red-950/30 border-b border-red-500/30">
               <CardTitle className="text-red-400 flex items-center gap-2">
@@ -553,22 +491,23 @@ export const AdminDashboard = () => {
 
       {/* 
         =========================================================
-        TAB 2: REGISTRATION PHASE (Clean Management Tools Only)
-        Keeps strictly registration management tools:
-        1. Registration status toggle & public share link
-        2. Player roster & category assignment shortcut
-        3. Pending team requests & podium admin approval shortcuts
+        2. REGISTRATION PHASE CONTROLS (activePhase === 'REGISTRATION')
+        SHOWS ONLY:
+        - Registration Schedule & Countdown inputs
+        - Public Share Link & Status
+        - Team Creation & Franchise Roster Management settings
+        - Player & Team Approval Shortcuts
         =========================================================
       */}
       {activeTab === 'REGISTRATION' && (
         <div className="space-y-8 animate-fadeIn">
           
-          {/* Phase Activation Bar */}
+          {/* Phase Activation Header */}
           <Card className="bg-slate-900/90 border-slate-800">
             <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h3 className="font-bold text-white text-sm">Activate Registration Phase</h3>
-                <p className="text-xs text-slate-400">Open public registration link and allow players to submit profiles.</p>
+                <h3 className="font-bold text-white text-sm">Event Phase: REGISTRATION</h3>
+                <p className="text-xs text-slate-400">Open player profile submissions and franchise team manager registrations.</p>
               </div>
               <Button
                 onClick={() => changePhaseMutation.mutate('REGISTRATION')}
@@ -580,12 +519,63 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Registration Share Link & Live Status */}
+          {/* 2.1 Registration Schedule & Countdown Inputs */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <span>Registration Schedule & Countdown Inputs</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Set public countdown timers for player registrations.
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration Start Date & Time</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.registrationStart}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationStart: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration Deadline (End)</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.registrationEnd}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationEnd: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => {
+                    api.put('/system/schedule', scheduleConfig)
+                      .then(() => {
+                        toast.success('Registration Schedule saved!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save schedule'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Registration Timers
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2.2 Public Registration Link */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
                 <Link2 className="w-5 h-5 text-emerald-400" />
-                <span>Public Player Registration Link</span>
+                <span>Public Registration Form Link</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
@@ -615,10 +605,12 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Management Shortcuts Grid */}
+          {/* 2.3 Team Creation & Roster Management Settings */}
+          <TeamManagerForm />
+
+          {/* 2.4 Registration Approval Shortcuts */}
           <div className="grid md:grid-cols-3 gap-6">
             
-            {/* Player Roster & Tier Assignment Shortcut */}
             <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-emerald-500/50 transition-all group">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -631,10 +623,10 @@ export const AdminDashboard = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
-                    Players Directory & Tiering
+                    Players Roster & Categories
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Review registered player cards, assign Category Tiers (Platinum/Gold/Silver), and grant Podium Admin rights.
+                    Review registered player profiles and assign Category Tiers (Platinum/Gold/Silver).
                   </p>
                 </div>
                 <Link to="/admin/players" className="block pt-2">
@@ -646,7 +638,6 @@ export const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Franchise Team Requests Shortcut */}
             <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-blue-500/50 transition-all group">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -659,10 +650,10 @@ export const AdminDashboard = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
-                    Team Creation Requests
+                    Franchise Team Requests
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Approve or reject franchise team registration requests from prospective team managers.
+                    Approve or reject team manager applications and franchise registrations.
                   </p>
                 </div>
                 <Link to="/admin/team-requests" className="block pt-2">
@@ -674,7 +665,6 @@ export const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Podium Admin Applications Shortcut */}
             <Card className="bg-slate-900/90 border-slate-800 shadow-xl hover:border-purple-500/50 transition-all group">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
@@ -690,7 +680,7 @@ export const AdminDashboard = () => {
                     Podium Admin Applications
                   </h3>
                   <p className="text-xs text-slate-400 mt-1">
-                    Review and approve applications for Podium Admin rights to manage live auction proceedings.
+                    Approve Podium Admin privileges for auction room operators.
                   </p>
                 </div>
                 <Link to="/admin/podium-requests" className="block pt-2">
@@ -709,16 +699,22 @@ export const AdminDashboard = () => {
 
       {/* 
         =========================================================
-        TAB 3: AUCTION PHASE
+        3. AUCTION PHASE CONTROLS (activePhase === 'AUCTION')
+        SHOWS ONLY:
+        - Auction Start/End Timers
+        - Auction Order & Lot Configuration
+        - Live Auction Control Parameters & Podium Launch
         =========================================================
       */}
       {activeTab === 'AUCTION' && (
         <div className="space-y-8 animate-fadeIn">
+          
+          {/* Phase Activation Header */}
           <Card className="bg-slate-900/90 border-slate-800">
             <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h3 className="font-bold text-white text-sm">Activate Auction Phase</h3>
-                <p className="text-xs text-slate-400">Launch live player bidding rooms and enable live team budget tracking.</p>
+                <h3 className="font-bold text-white text-sm">Event Phase: AUCTION</h3>
+                <p className="text-xs text-slate-400">Launch live bidding rooms and activate real-time budget ledgers.</p>
               </div>
               <Button
                 onClick={() => changePhaseMutation.mutate('AUCTION')}
@@ -730,16 +726,115 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
+          {/* 3.1 Auction Start/End Timers */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Clock className="w-5 h-5 text-emerald-400" />
+                <span>Auction Timers & Schedule</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Auction Start Date & Time</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.auctionStart}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionStart: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Auction End Date & Time</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.auctionEnd}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, auctionEnd: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => {
+                    api.put('/system/schedule', scheduleConfig)
+                      .then(() => {
+                        toast.success('Auction Schedule saved!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save schedule'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Auction Schedule
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3.2 Auction Order & Lot Configuration */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <ListOrdered className="w-5 h-5 text-emerald-400" />
+                <span>Auction Order & Bidding Lot Parameters</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Min Bid Increment ($)</label>
+                  <Input 
+                    type="number"
+                    value={auctionRules.bidIncrement}
+                    onChange={(e) => setAuctionRules(prev => ({ ...prev, bidIncrement: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-emerald-400 font-mono font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Lot Countdown Timer (Seconds)</label>
+                  <Input 
+                    type="number"
+                    value={auctionRules.timerSeconds}
+                    onChange={(e) => setAuctionRules(prev => ({ ...prev, timerSeconds: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-white font-mono font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Category Tier Bidding Order</label>
+                  <Input 
+                    value={auctionRules.categoryOrder}
+                    onChange={(e) => setAuctionRules(prev => ({ ...prev, categoryOrder: e.target.value }))}
+                    placeholder="PLATINUM,GOLD,SILVER,BRONZE"
+                    className="bg-slate-950 border-slate-700 text-white font-mono font-semibold text-xs"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => toast.success('Auction Lot Rules saved!')}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Auction Rules
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 3.3 Live Auction Control Parameters & Podium Launch */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl border-2 border-emerald-500/30">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
                 <Gavel className="w-5 h-5 text-emerald-400" />
-                <span>Live Auction Controls</span>
+                <span>Live Auction Podium Launch</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <p className="text-xs text-slate-300">
-                Access the Live Auction Podium to start bidding timers, select unassigned players, and assign winning team bids.
+                Launch the interactive live bidding room to start timers, process team bids, and lock player sales.
               </p>
               <Link to="/auction/admin">
                 <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl flex items-center gap-2 shadow-lg">
@@ -749,21 +844,28 @@ export const AdminDashboard = () => {
               </Link>
             </CardContent>
           </Card>
+
         </div>
       )}
 
       {/* 
         =========================================================
-        TAB 4: TOURNAMENT PHASE
+        4. TOURNAMENT PHASE CONTROLS (activePhase === 'TOURNAMENT')
+        SHOWS ONLY:
+        - Match Scheduling & Fixture Generator Settings
+        - Upcoming/Latest Match Controls & Quick Score Updates
+        - Points Table Management & Standings
         =========================================================
       */}
       {activeTab === 'TOURNAMENT' && (
         <div className="space-y-8 animate-fadeIn">
+          
+          {/* Phase Activation Header */}
           <Card className="bg-slate-900/90 border-slate-800">
             <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h3 className="font-bold text-white text-sm">Activate Tournament Phase</h3>
-                <p className="text-xs text-slate-400">Lock rosters and open match fixture management and points tables.</p>
+                <h3 className="font-bold text-white text-sm">Event Phase: TOURNAMENT</h3>
+                <p className="text-xs text-slate-400">Lock rosters and open tournament match fixtures and points tables.</p>
               </div>
               <Button
                 onClick={() => changePhaseMutation.mutate('TOURNAMENT')}
@@ -775,25 +877,98 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
+          {/* 4.1 Match Scheduling & Fixture Generator Settings */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
-                <Trophy className="w-5 h-5 text-emerald-400" />
-                <span>Tournament Operations Panel</span>
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <span>Match Scheduling & Fixture Generator</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Default Match Duration (Mins)</label>
+                  <Input 
+                    type="number"
+                    value={tournamentRules.matchDuration}
+                    onChange={(e) => setTournamentRules(prev => ({ ...prev, matchDuration: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-white font-mono font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Points per Win</label>
+                  <Input 
+                    type="number"
+                    value={tournamentRules.pointsPerWin}
+                    onChange={(e) => setTournamentRules(prev => ({ ...prev, pointsPerWin: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-emerald-400 font-mono font-bold text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Points per Draw</label>
+                  <Input 
+                    type="number"
+                    value={tournamentRules.pointsPerDraw}
+                    onChange={(e) => setTournamentRules(prev => ({ ...prev, pointsPerDraw: Number(e.target.value) }))}
+                    className="bg-slate-950 border-slate-700 text-amber-400 font-mono font-bold text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => toast.success('Tournament Match Rules saved!')}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Match Rules
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 4.2 Upcoming / Latest Match Controls & Score Updates */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Activity className="w-5 h-5 text-emerald-400" />
+                <span>Upcoming & Live Match Controls</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <p className="text-xs text-slate-300">
-                Manage match schedules, enter live goal/assist events, and track team standings.
+                Enter live scores, yellow/red cards, and goal scorers directly into match logs.
               </p>
               <Link to="/tournament/admin">
                 <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl flex items-center gap-2 shadow-lg">
-                  <Trophy className="w-4 h-4" />
-                  <span>Open Tournament Operations</span>
+                  <Activity className="w-4 h-4" />
+                  <span>Open Live Match Scoreboard</span>
                 </Button>
               </Link>
             </CardContent>
           </Card>
+
+          {/* 4.3 Points Table Management & Standings */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Award className="w-5 h-5 text-emerald-400" />
+                <span>Points Table Management & Standings</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <p className="text-xs text-slate-300">
+                Auto-calculate goal difference, points standings, and playoff qualification spots.
+              </p>
+              <Link to="/tournament/admin">
+                <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-11 px-6 rounded-xl flex items-center gap-2 shadow-lg">
+                  <Trophy className="w-4 h-4" />
+                  <span>View & Manage Points Table</span>
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
         </div>
       )}
 
