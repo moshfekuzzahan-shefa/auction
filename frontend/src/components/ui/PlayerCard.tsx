@@ -99,8 +99,8 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Player Card Image Avatar (Enlarged w-48 h-48 sm:w-52 sm:h-52 completely covering watermark) */}
-      <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2 bg-transparent">
+      {/* LAYER 3: Player Card Image Avatar (Perfectly Centered Vertically Over Watermark) */}
+      <div className="absolute inset-0 flex items-center justify-center pt-16 pb-16 pointer-events-none z-2 bg-transparent">
         <div className="relative mx-auto w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-xl flex items-center justify-center bg-zinc-800">
           <img 
             src={rawPhotoUrl || "/default-avatar.png"} 
