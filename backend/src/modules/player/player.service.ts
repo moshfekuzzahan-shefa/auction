@@ -237,27 +237,16 @@ export class PlayerService {
       ? `Your Category Tier was updated to ${categoryRecord.name} ($${categoryRecord.basePrice})` 
       : (data.categoryId !== undefined ? 'Your Category Tier was reset to Unassigned Tier.' : 'Admin updated your profile details.');
 
-    // 3. Build Prisma Update Payload using nested relation connect/disconnect
+    // 3. Build Prisma Update Payload using PRIMITIVE scalar values
     const updateData: any = {
       hasUnreadAdminUpdates: true,
       lastAdminChange: changeMsg,
     };
 
     if (data.categoryId !== undefined) {
-      if (categoryRecord) {
-        updateData.category = {
-          connect: { id: categoryRecord.id }
-        };
-        updateData.basePrice = categoryRecord.basePrice;
-      } else {
-        updateData.category = {
-          disconnect: true
-        };
-        updateData.basePrice = null;
-      }
-    }
-
-    if (basePrice !== undefined) {
+      updateData.categoryId = categoryRecord ? categoryRecord.id : null;
+      updateData.basePrice = basePrice;
+    } else if (basePrice !== undefined) {
       updateData.basePrice = basePrice;
     }
 
@@ -283,21 +272,16 @@ export class PlayerService {
       updateData.jerseyName = String(data.jerseyName).trim();
     }
 
-    // 4. Safe DB Update in try-catch using nested relation syntax
-    try {
-      return await prisma.profile.update({
-        where: { id: targetProfileId },
-        data: updateData,
-        include: {
-          user: { select: { name: true, email: true } },
-          category: true,
-          team: { select: { name: true } }
-        }
-      });
-    } catch (dbError: any) {
-      console.error('Failed in prisma.profile.update with connect/disconnect relation syntax:', dbError);
-      throw new Error(`Database error updating category: ${dbError.message}`);
-    }
+    // 4. Directly update profile using primitive scalar values
+    return await prisma.profile.update({
+      where: { id: targetProfileId },
+      data: updateData,
+      include: {
+        user: { select: { name: true, email: true } },
+        category: true,
+        team: { select: { name: true } }
+      }
+    });
   }
 
   static async markAdminUpdatesAsRead(userId: string) {
