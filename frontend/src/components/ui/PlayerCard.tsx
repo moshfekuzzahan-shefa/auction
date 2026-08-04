@@ -21,13 +21,13 @@ export const PlayerCard = ({
 }: PlayerCardProps) => {
   const isPodiumAdmin = player.user?.role === 'PODIUM_ADMIN';
 
-  // Category Color Palette matching reference image
+  // Category-based Backdrop & Theme Gradient matching reference image
   const getCardTheme = (catName?: string) => {
     const name = (catName || '').toLowerCase();
     if (name.includes('platinum')) {
       return {
-        bgGradient: 'from-purple-900/80 via-fuchsia-950/80 to-slate-950',
-        badgeBg: 'from-pink-500 to-fuchsia-600 shadow-[0_0_15px_rgba(236,72,153,0.7)]',
+        bgGradient: 'from-purple-900 via-fuchsia-950 to-slate-950',
+        badgeBg: 'from-pink-500 to-fuchsia-600 shadow-[0_0_15px_rgba(236,72,153,0.8)]',
         border: 'border-fuchsia-500/50',
         flag: '🇫🇷',
         country: 'France',
@@ -36,8 +36,8 @@ export const PlayerCard = ({
     }
     if (name.includes('gold')) {
       return {
-        bgGradient: 'from-emerald-800/80 via-green-950/80 to-slate-950',
-        badgeBg: 'from-emerald-400 to-lime-500 shadow-[0_0_15px_rgba(16,185,129,0.7)]',
+        bgGradient: 'from-emerald-800 via-green-950 to-slate-950',
+        badgeBg: 'from-emerald-400 to-lime-500 shadow-[0_0_15px_rgba(16,185,129,0.8)]',
         border: 'border-emerald-500/50',
         flag: '🇧🇷',
         country: 'Brazil',
@@ -46,8 +46,8 @@ export const PlayerCard = ({
     }
     if (name.includes('silver')) {
       return {
-        bgGradient: 'from-blue-900/80 via-slate-950/80 to-slate-950',
-        badgeBg: 'from-cyan-400 to-blue-500 shadow-[0_0_15px_rgba(6,182,212,0.7)]',
+        bgGradient: 'from-blue-900 via-slate-950 to-slate-950',
+        badgeBg: 'from-cyan-400 to-blue-500 shadow-[0_0_15px_rgba(6,182,212,0.8)]',
         border: 'border-cyan-500/50',
         flag: '🇺🇦',
         country: 'Ukraine',
@@ -56,8 +56,8 @@ export const PlayerCard = ({
     }
     // Bronze / Default
     return {
-      bgGradient: 'from-amber-900/80 via-orange-950/80 to-slate-950',
-      badgeBg: 'from-amber-400 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.7)]',
+      bgGradient: 'from-amber-900 via-orange-950 to-slate-950',
+      badgeBg: 'from-amber-400 to-orange-500 shadow-[0_0_15px_rgba(245,158,11,0.8)]',
       border: 'border-amber-500/50',
       flag: '🇧🇩',
       country: 'Bangladesh',
@@ -67,7 +67,18 @@ export const PlayerCard = ({
 
   const theme = getCardTheme(player.category?.name);
   const jerseyNum = player.studentId ? player.studentId.slice(-2) : '20';
-  const playerPhoto = player.imageUrl || player.publicId;
+  const rawPhotoUrl = player.imageUrl || player.publicId;
+
+  // Cloudinary AI Background Removal Cutout URL Transformation helper
+  const getCutoutUrl = (url?: string) => {
+    if (!url) return null;
+    if (url.includes('res.cloudinary.com') && !url.includes('e_background_removal')) {
+      return url.replace('/upload/', '/upload/e_background_removal/');
+    }
+    return url;
+  };
+
+  const cutoutUrl = getCutoutUrl(rawPhotoUrl);
 
   const handleCardClick = () => {
     if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
@@ -80,44 +91,75 @@ export const PlayerCard = ({
   return (
     <Card 
       onClick={handleCardClick}
-      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer min-h-[420px] bg-slate-950 ${theme.border} ${
+      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer min-h-[420px] ${
         isAssignPodiumAdminMode 
-          ? 'ring-4 ring-purple-500 shadow-[0_0_35px_rgba(168,85,247,0.8)] scale-[1.02]' 
-          : 'hover:-translate-y-2 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]'
+          ? 'ring-4 ring-purple-500 shadow-[0_0_35px_rgba(168,85,247,0.8)] scale-[1.02] border-purple-400' 
+          : `${theme.border} hover:-translate-y-2 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]`
       }`}
     >
-      {/* 1. FULL CARD BACKGROUND PLAYER PHOTO */}
-      {playerPhoto ? (
-        <img 
-          src={playerPhoto} 
-          alt={player.user?.name} 
-          className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
-        />
-      ) : (
-        <div className={`absolute inset-0 bg-gradient-to-b ${theme.bgGradient} flex items-center justify-center`}>
-          {/* Soccer Ball Watermark Graphic */}
-          <svg className="w-72 h-72 text-white/10 fill-current pointer-events-none" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 13v1c0 1.1.9 2 2 2v2.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-          </svg>
-          <div className="absolute inset-0 flex items-end justify-center pb-20">
-            <div className="w-48 h-60 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent rounded-t-full opacity-60" />
+      {/* 
+        =========================================================
+        LAYER 1 (Bottom): Category-Specific Backdrop Gradient
+        =========================================================
+      */}
+      <div className={`absolute inset-0 bg-gradient-to-b ${theme.bgGradient} z-0`} />
+
+      {/* 
+        =========================================================
+        LAYER 2 (Middle): Soccer Ball Watermark Pattern (Behind Cutout)
+        =========================================================
+      */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none z-1">
+        <svg className="w-72 h-72 text-white fill-current" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 13v1c0 1.1.9 2 2 2v2.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+      </div>
+
+      {/* Top Ambient Light Glow */}
+      <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
+
+      {/* 
+        =========================================================
+        LAYER 3: Dynamic "Cut-Out" Player Subject Image
+        =========================================================
+      */}
+      <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2">
+        {cutoutUrl ? (
+          <img 
+            src={cutoutUrl} 
+            alt={player.user?.name} 
+            className="w-48 h-56 object-contain object-bottom transition-transform duration-700 group-hover:scale-105 drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)]"
+            onError={(e) => {
+              // Fallback to original photo if background_removal transform is not cached
+              if (rawPhotoUrl && (e.target as HTMLImageElement).src !== rawPhotoUrl) {
+                (e.target as HTMLImageElement).src = rawPhotoUrl;
+              }
+            }}
+          />
+        ) : (
+          /* Default Silhouette Cutout Graphic */
+          <div className="w-44 h-52 bg-slate-950/80 rounded-t-full border border-white/10 flex items-end justify-center shadow-2xl overflow-hidden relative opacity-70">
+            <svg className="w-36 h-44 text-slate-800 fill-current" viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Ambient Gradient Color Wash Tint */}
-      <div className={`absolute inset-0 bg-gradient-to-b ${theme.bgGradient} opacity-40 mix-blend-color-dodge pointer-events-none`} />
+      {/* Top & Bottom Dark Gradient Overlays for UI Readability */}
+      <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none z-3" />
+      <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent pointer-events-none z-3" />
 
-      {/* Top Gradient Overlay for Header Readability */}
-      <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-slate-950/95 via-slate-950/60 to-transparent pointer-events-none z-10" />
+      {/* 
+        =========================================================
+        LAYER 4 (Top): UI Elements, Stats Dock & Controls
+        =========================================================
+      */}
 
-      {/* Bottom Gradient Overlay for Dock Readability */}
-      <div className="absolute bottom-0 inset-x-0 h-72 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent pointer-events-none z-10" />
-
-      {/* 2. TOP BAR HEADER (Overlaid on top of image) */}
-      <div className="relative z-20 p-4 flex items-center justify-between">
+      {/* 1. Top Bar: Flag & Country/Team Name */}
+      <div className="relative z-10 p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xl leading-none drop-shadow-lg">{theme.flag}</span>
+          <span className="text-xl leading-none drop-shadow-md">{theme.flag}</span>
           <span className="text-sm font-black tracking-wide text-white drop-shadow-md truncate max-w-[120px]">
             {player.team?.name || theme.country}
           </span>
@@ -139,13 +181,11 @@ export const PlayerCard = ({
         </div>
       </div>
 
-      {/* Empty Spacer */}
-      <div className="flex-1" />
+      <div className="flex-1 z-10" />
 
-      {/* 3. BOTTOM OVERLAY DOCK (Overlaid on top of image at lower section) */}
-      <div className="relative z-20 p-4 space-y-3 pt-6">
+      {/* 2. Bottom Overlay Dock */}
+      <div className="relative z-10 p-4 space-y-3 pt-6">
         
-        {/* Reference Image Dock Box */}
         <div className="bg-slate-950/90 border border-white/15 rounded-2xl p-4 pt-6 relative backdrop-blur-xl shadow-2xl space-y-3">
           
           {/* Center Overlapping Number Badge */}
@@ -184,7 +224,7 @@ export const PlayerCard = ({
 
         </div>
 
-        {/* 4. Admin Category Selector Footer */}
+        {/* 3. Admin Category Tier Selector */}
         <div className="bg-slate-950/95 p-2 rounded-xl border border-slate-800">
           <select 
             value={player.categoryId || player.category?.id || ''}
