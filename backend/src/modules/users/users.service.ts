@@ -40,22 +40,38 @@ export class UsersService {
   }
 
   static async updateRole(userId: string, targetRole: 'PODIUM_ADMIN' | 'PLAYER' | 'TEAM_MANAGER' | 'SUPER_ADMIN') {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    let user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      const prof = await prisma.profile.findUnique({ where: { id: userId } });
+      if (prof) {
+        user = await prisma.user.findUnique({ where: { id: prof.userId } });
+      }
+    }
+    if (!user) {
+      const profByUserId = await prisma.profile.findUnique({ where: { userId } });
+      if (profByUserId) {
+        user = await prisma.user.findUnique({ where: { id: profByUserId.userId } });
+      }
+    }
     if (!user) throw new Error('User not found.');
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { role: targetRole },
+      where: { id: user.id },
+      data: { 
+        role: targetRole,
+        resetTokenExpiry: null,
+        resetToken: null
+      },
       select: { id: true, name: true, email: true, role: true }
     });
 
-    const profile = await prisma.profile.findUnique({ where: { userId } });
+    const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
     if (profile) {
       const msg = targetRole === 'PODIUM_ADMIN'
         ? '👑 YOU ARE NOW A PODIUM ADMIN! Access live player auctions from the Podium Control Panel in your sidebar.'
         : `Your account role was updated to ${targetRole}.`;
       await prisma.profile.update({
-        where: { userId },
+        where: { id: profile.id },
         data: {
           hasUnreadAdminUpdates: true,
           lastAdminChange: msg

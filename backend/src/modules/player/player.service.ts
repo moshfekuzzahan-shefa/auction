@@ -285,8 +285,13 @@ export class PlayerService {
   }
 
   static async markAdminUpdatesAsRead(userId: string) {
+    let profile = await prisma.profile.findUnique({ where: { userId } });
+    if (!profile) {
+      profile = await prisma.profile.findUnique({ where: { id: userId } });
+    }
+    if (!profile) return null;
     return prisma.profile.update({
-      where: { userId },
+      where: { id: profile.id },
       data: {
         hasUnreadAdminUpdates: false
       }
