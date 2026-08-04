@@ -193,7 +193,7 @@ export const PlayerTeamsDirectoryPage = () => {
                 {!selectedTeam.players || selectedTeam.players.length === 0 ? (
                   <div className="p-8 bg-slate-950/60 rounded-xl border border-slate-800 text-center text-slate-400 text-sm flex flex-col items-center justify-center space-y-2">
                     <Users className="w-8 h-8 text-slate-600" />
-                    <span>No players acquired yet in this team roster.</span>
+                    <span className="font-semibold text-slate-300">No players acquired yet.</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-1">
