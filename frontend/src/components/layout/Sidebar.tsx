@@ -138,10 +138,20 @@ export const Sidebar = () => {
               onClick={() => setIsMobileOpen(false)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                location.pathname.startsWith('/team') ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                location.pathname === '/team' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
               )}
             >
-              <Users className="w-4 h-4" /> Manager Roster
+              <Users className="w-4 h-4 text-emerald-400" /> Manager Roster
+            </Link>
+            <Link 
+              to="/dashboard/players" 
+              onClick={() => setIsMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                location.pathname === '/dashboard/players' ? "bg-primary/10 text-primary font-bold" : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+              )}
+            >
+              <Users className="w-4 h-4 text-blue-400" /> Players Directory
             </Link>
             <Link 
               to="/auction" 

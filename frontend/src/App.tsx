@@ -129,6 +129,7 @@ function App() {
                 <Route path="/dashboard" element={<DashboardHome />} />
                 <Route path="/dashboard/my-team" element={<PlayerMyTeamPage />} />
                 <Route path="/dashboard/teams" element={<PlayerTeamsDirectoryPage />} />
+                <Route path="/dashboard/players" element={<PlayerListAdminPage />} />
                 <Route path="/dashboard/schedules" element={<PlayerSchedulesPage />} />
               
               <Route element={<RoleProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>

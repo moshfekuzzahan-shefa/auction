@@ -6,9 +6,10 @@ interface PlayerCardProps {
   player: any;
   categories: any[];
   onSelectPlayer: (player: any) => void;
-  onCategoryChange: (profileId: string, categoryId: string) => void;
+  onCategoryChange?: (profileId: string, categoryId: string) => void;
   onTogglePodiumAdmin?: (player: any) => void;
   isAssignPodiumAdminMode?: boolean;
+  isReadOnly?: boolean;
 }
 
 export const PlayerCard = ({
@@ -17,7 +18,8 @@ export const PlayerCard = ({
   onSelectPlayer,
   onCategoryChange,
   onTogglePodiumAdmin,
-  isAssignPodiumAdminMode = false
+  isAssignPodiumAdminMode = false,
+  isReadOnly = false
 }: PlayerCardProps) => {
   const isPodiumAdmin = player.user?.role === 'PODIUM_ADMIN';
 
@@ -66,7 +68,7 @@ export const PlayerCard = ({
   const rawPhotoUrl = player.imageUrl || player.publicId || player.avatarUrl || player.user?.avatarUrl;
 
   const handleCardClick = () => {
-    if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
+    if (!isReadOnly && isAssignPodiumAdminMode && onTogglePodiumAdmin) {
       onTogglePodiumAdmin(player);
     } else {
       onSelectPlayer(player);
@@ -81,7 +83,7 @@ export const PlayerCard = ({
     <Card 
       onClick={handleCardClick}
       className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer min-h-[430px] ${
-        isAssignPodiumAdminMode 
+        !isReadOnly && isAssignPodiumAdminMode 
           ? 'ring-4 ring-purple-500 shadow-[0_0_35px_rgba(168,85,247,0.8)] scale-[1.02] border-purple-400' 
           : `${theme.border} hover:-translate-y-2 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]`
       }`}
@@ -99,7 +101,7 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Player Card Image Avatar (Perfectly Centered Vertically Over Watermark) */}
+      {/* LAYER 3: Player Card Image Avatar */}
       <div className="absolute inset-0 flex items-center justify-center pt-16 pb-16 pointer-events-none z-2 bg-transparent">
         <div className="relative mx-auto w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden border-2 border-white/20 shadow-xl flex items-center justify-center bg-zinc-800">
           <img 
@@ -118,7 +120,7 @@ export const PlayerCard = ({
       <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-slate-950/90 via-slate-950/40 to-transparent pointer-events-none z-3" />
       <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-transparent pointer-events-none z-3" />
 
-      {/* LAYER 4: UniFootball Header & Category Selector */}
+      {/* LAYER 4: UniFootball Header & Category Display */}
       <div className="relative z-10 p-4 flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-xs font-black tracking-tight text-white drop-shadow-md flex items-center gap-1">
@@ -145,24 +147,30 @@ export const PlayerCard = ({
             </Badge>
           )}
 
-          <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <select
-              value={player.categoryId || player.category?.id || ''}
-              onChange={(e) => {
-                e.stopPropagation();
-                onCategoryChange(player.id || player.userId, e.target.value);
-              }}
-              className={`h-7 px-2.5 rounded-full border text-[10px] font-black uppercase tracking-wider focus:outline-none cursor-pointer shadow-md transition-all appearance-none pr-6 ${theme.dropdownBg}`}
-            >
-              <option value="" className="bg-slate-900 text-amber-400 font-semibold">Unassigned</option>
-              {categories.map((cat: any) => (
-                <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
-                  {cat.name} (${cat.basePrice})
-                </option>
-              ))}
-            </select>
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[9px] font-black text-slate-300">▼</span>
-          </div>
+          {!isReadOnly && onCategoryChange ? (
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <select
+                value={player.categoryId || player.category?.id || ''}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onCategoryChange(player.id || player.userId, e.target.value);
+                }}
+                className={`h-7 px-2.5 rounded-full border text-[10px] font-black uppercase tracking-wider focus:outline-none cursor-pointer shadow-md transition-all appearance-none pr-6 ${theme.dropdownBg}`}
+              >
+                <option value="" className="bg-slate-900 text-amber-400 font-semibold">Unassigned</option>
+                {categories.map((cat: any) => (
+                  <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
+                    {cat.name} (${cat.basePrice})
+                  </option>
+                ))}
+              </select>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[9px] font-black text-slate-300">▼</span>
+            </div>
+          ) : (
+            <div className={`h-7 px-3 rounded-full border text-[10px] font-black uppercase tracking-wider flex items-center shadow-md ${theme.dropdownBg}`}>
+              {player.category?.name || 'Unassigned'} {player.category?.basePrice ? `($${player.category.basePrice})` : ''}
+            </div>
+          )}
         </div>
       </div>
 
@@ -198,7 +206,7 @@ export const PlayerCard = ({
             ))}
           </div>
 
-          {isAssignPodiumAdminMode && (
+          {!isReadOnly && isAssignPodiumAdminMode && (
             <div className="mt-2 text-center text-[10px] font-black uppercase tracking-wider text-purple-300 bg-purple-950/80 p-1.5 rounded-xl border border-purple-600/50 animate-pulse">
               Click Card to Assign Podium Admin
             </div>

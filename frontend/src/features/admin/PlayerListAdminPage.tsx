@@ -10,9 +10,16 @@ import { Button } from '../../components/ui/Button';
 import { PlayerCard } from '../../components/ui/PlayerCard';
 import { Search, LayoutGrid, List, ShieldAlert, CheckCircle2, Sliders, Sparkles, Crown } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
+import { useAppSelector } from '../../store/hooks';
 import api from '../../services/api';
 
-export const PlayerListAdminPage = () => {
+interface PlayerListAdminPageProps {
+  isReadOnly?: boolean;
+}
+
+export const PlayerListAdminPage = ({ isReadOnly = false }: PlayerListAdminPageProps) => {
+  const { user } = useAppSelector((state) => state.auth);
+  const readOnlyMode = isReadOnly || user?.role === 'TEAM_MANAGER';
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,22 +210,29 @@ export const PlayerListAdminPage = () => {
             <span>Players Directory & Scouting</span>
             <Sparkles className="w-6 h-6 text-emerald-400" />
           </h1>
-          <p className="text-slate-400 text-sm">Super Admin Scouting Panel & Category Tier Assignment.</p>
+          <p className="text-slate-400 text-sm">
+            {readOnlyMode 
+              ? 'Browse registered player profiles, positions, and category tiers.' 
+              : 'Super Admin Scouting Panel & Category Tier Assignment.'
+            }
+          </p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsAssignPodiumAdminMode(!isAssignPodiumAdminMode)}
-            className={isAssignPodiumAdminMode
-              ? "bg-purple-600 hover:bg-purple-500 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] font-black text-xs rounded-xl animate-pulse"
-              : "bg-slate-900 hover:bg-slate-800 border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl"
-            }
-          >
-            <Crown className="w-4 h-4 mr-1.5 text-purple-400" />
-            <span>{isAssignPodiumAdminMode ? 'Podium Admin Mode: ACTIVE' : 'Assign Podium Admin Mode'}</span>
-          </Button>
+          {!readOnlyMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsAssignPodiumAdminMode(!isAssignPodiumAdminMode)}
+              className={isAssignPodiumAdminMode
+                ? "bg-purple-600 hover:bg-purple-500 border-purple-400 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] font-black text-xs rounded-xl animate-pulse"
+                : "bg-slate-900 hover:bg-slate-800 border-purple-500/40 text-purple-300 font-bold text-xs rounded-xl"
+              }
+            >
+              <Crown className="w-4 h-4 mr-1.5 text-purple-400" />
+              <span>{isAssignPodiumAdminMode ? 'Podium Admin Mode: ACTIVE' : 'Assign Podium Admin Mode'}</span>
+            </Button>
+          )}
 
           <div className="relative w-full sm:w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -250,7 +264,7 @@ export const PlayerListAdminPage = () => {
         </div>
       </div>
 
-      {isAssignPodiumAdminMode && (
+      {!readOnlyMode && isAssignPodiumAdminMode && (
         <div className="p-3.5 bg-purple-950/60 border border-purple-500/50 rounded-2xl text-purple-200 text-xs font-bold flex items-center justify-between shadow-lg animate-pulse">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-purple-400 shrink-0" />
@@ -283,10 +297,11 @@ export const PlayerListAdminPage = () => {
               categories={categories}
               onSelectPlayer={setSelectedPlayer}
               onCategoryChange={(profileId, categoryId) => {
-                quickAssignCategoryMutation.mutate({ profileId, categoryId });
+                if (!readOnlyMode) quickAssignCategoryMutation.mutate({ profileId, categoryId });
               }}
-              onTogglePodiumAdmin={handleTogglePodiumAdmin}
-              isAssignPodiumAdminMode={isAssignPodiumAdminMode}
+              onTogglePodiumAdmin={readOnlyMode ? undefined : handleTogglePodiumAdmin}
+              isAssignPodiumAdminMode={!readOnlyMode && isAssignPodiumAdminMode}
+              isReadOnly={readOnlyMode}
             />
           ))}
         </div>
@@ -300,7 +315,7 @@ export const PlayerListAdminPage = () => {
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Student ID</th>
                   <th className="px-4 py-3">Position</th>
-                  <th className="px-4 py-3">Category Tier Selector</th>
+                  <th className="px-4 py-3">{readOnlyMode ? 'Category Tier' : 'Category Tier Selector'}</th>
                   <th className="px-4 py-3">Base Price</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
@@ -330,23 +345,29 @@ export const PlayerListAdminPage = () => {
                       <td className="px-4 py-3 text-slate-400">{player.studentId || '-'}</td>
                       <td className="px-4 py-3 font-medium text-emerald-400">{player.primaryPos}</td>
                       <td className="px-4 py-3">
-                        <select 
-                          value={player.categoryId || player.category?.id || ''}
-                          onChange={(e) => {
-                            quickAssignCategoryMutation.mutate({
-                              profileId: player.id || player.userId,
-                              categoryId: e.target.value
-                            });
-                          }}
-                          className="h-9 px-3 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500 shadow-inner"
-                        >
-                          <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
-                          {categories.map((cat: any) => (
-                            <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
-                              {cat.name} (${cat.basePrice})
-                            </option>
-                          ))}
-                        </select>
+                        {readOnlyMode ? (
+                          <span className="px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-xs font-bold text-emerald-400">
+                            {player.category?.name || 'Unassigned'}
+                          </span>
+                        ) : (
+                          <select 
+                            value={player.categoryId || player.category?.id || ''}
+                            onChange={(e) => {
+                              quickAssignCategoryMutation.mutate({
+                                profileId: player.id || player.userId,
+                                categoryId: e.target.value
+                              });
+                            }}
+                            className="h-9 px-3 rounded-xl border border-slate-700 bg-slate-950 text-white text-xs font-bold focus:outline-none focus:border-emerald-500 shadow-inner"
+                          >
+                            <option value="" className="bg-slate-900 text-slate-400">-- Unassigned Tier --</option>
+                            {categories.map((cat: any) => (
+                              <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
+                                {cat.name} (${cat.basePrice})
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono text-white font-bold">
                         ${player.category?.basePrice || 0}
@@ -371,7 +392,7 @@ export const PlayerListAdminPage = () => {
         </Card>
       )}
 
-      {/* Admin Scouting & Category Assignment Modal */}
+      {/* Player Profile & Scouting Details Modal */}
       <Dialog open={!!selectedPlayer} onOpenChange={(open) => !open && setSelectedPlayer(null)}>
         <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-slate-900 border-slate-800 text-white shadow-2xl">
           {selectedPlayer && (
@@ -411,90 +432,120 @@ export const PlayerListAdminPage = () => {
                   </p>
                 </div>
 
-                {/* Scouting Admin Controls Form */}
-                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
-                  <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm border-b border-slate-800 pb-2">
-                    <Sliders className="w-4 h-4" />
-                    <span>Admin Scouting & Category Tier Assignment Controls</span>
+                {/* Scouting & Category Information / Admin Controls */}
+                {readOnlyMode ? (
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Player Scouting Summary</span>
+                      <Badge className="bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-bold">
+                        {selectedPlayer.category?.name ? `${selectedPlayer.category.name} Tier` : 'Unassigned Tier'}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                      <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                        <span className="text-[11px] font-semibold text-slate-400 block">Primary Position</span>
+                        <span className="text-emerald-400 font-extrabold text-sm">{selectedPlayer.primaryPos || 'CM'}</span>
+                      </div>
+                      <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                        <span className="text-[11px] font-semibold text-slate-400 block">Base Price</span>
+                        <span className="text-white font-mono font-extrabold text-sm">${selectedPlayer.category?.basePrice || 0}</span>
+                      </div>
+                      <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+                        <span className="text-[11px] font-semibold text-slate-400 block">Auction Status</span>
+                        <span className="font-extrabold text-sm">
+                          {selectedPlayer.isSold ? (
+                            <span className="text-emerald-400">Sold ({selectedPlayer.team?.name})</span>
+                          ) : (
+                            <span className="text-slate-400 font-semibold">Available / Unsold</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    
-                    {/* Category Selection Dropdown */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                        Assigned Category Tier
-                      </label>
-                      <select 
-                        value={editCategoryId} 
-                        onChange={(e) => setEditCategoryId(e.target.value)}
-                        className="w-full h-11 px-3 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                      >
-                        <option value="" className="bg-slate-900 text-amber-400">-- Unassigned Tier (Pending Trial) --</option>
-                        {categories.map((cat: any) => (
-                          <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
-                            {cat.name} Tier (Base Price: ${cat.basePrice})
-                          </option>
-                        ))}
-                      </select>
+                ) : (
+                  <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+                    <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm border-b border-slate-800 pb-2">
+                      <Sliders className="w-4 h-4" />
+                      <span>Admin Scouting & Category Tier Assignment Controls</span>
                     </div>
 
-                    {/* Primary Position Selection */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                        Primary Position
-                      </label>
-                      <select 
-                        value={editPrimaryPos} 
-                        onChange={(e) => setEditPrimaryPos(e.target.value)}
-                        className="w-full h-11 px-3 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                      >
-                        {positions.map((p: any) => (
-                          <option key={p.id} value={p.code} className="bg-slate-900 text-white">
-                            {p.name} ({p.code})
-                          </option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      {/* Category Selection Dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Assigned Category Tier
+                        </label>
+                        <select 
+                          value={editCategoryId} 
+                          onChange={(e) => setEditCategoryId(e.target.value)}
+                          className="w-full h-11 px-3 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        >
+                          <option value="" className="bg-slate-900 text-amber-400">-- Unassigned Tier (Pending Trial) --</option>
+                          {categories.map((cat: any) => (
+                            <option key={cat.id} value={cat.id} className="bg-slate-900 text-white font-bold">
+                              {cat.name} Tier (Base Price: ${cat.basePrice})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Primary Position Selection */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                          Primary Position
+                        </label>
+                        <select 
+                          value={editPrimaryPos} 
+                          onChange={(e) => setEditPrimaryPos(e.target.value)}
+                          className="w-full h-11 px-3 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        >
+                          {positions.map((p: any) => (
+                            <option key={p.id} value={p.code} className="bg-slate-900 text-white">
+                              {p.name} ({p.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                     </div>
 
-                  </div>
+                    {!editCategoryId && (
+                      <div className="p-3 bg-amber-950/40 border border-amber-800/40 rounded-xl text-amber-300 text-xs font-medium flex items-center space-x-2">
+                        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>This player cannot be pulled onto the Auction Podium until a Category Tier is assigned.</span>
+                      </div>
+                    )}
 
-                  {!editCategoryId && (
-                    <div className="p-3 bg-amber-950/40 border border-amber-800/40 rounded-xl text-amber-300 text-xs font-medium flex items-center space-x-2">
-                      <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>This player cannot be pulled onto the Auction Podium until a Category Tier is assigned.</span>
-                    </div>
-                  )}
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-800">
+                      {selectedPlayer.user?.role !== 'SUPER_ADMIN' ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            handleTogglePodiumAdmin(selectedPlayer);
+                            setSelectedPlayer(null);
+                          }}
+                          className={selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'bg-red-950/50 hover:bg-red-900 border-red-800 text-red-200 text-xs font-bold rounded-xl' : 'bg-purple-950/60 hover:bg-purple-900 border-purple-700 text-purple-200 text-xs font-bold rounded-xl'}
+                        >
+                          <Crown className="w-3.5 h-3.5 mr-1.5" />
+                          {selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'Revoke Podium Admin' : 'Promote to Podium Admin'}
+                        </Button>
+                      ) : <div />}
 
-                  <div className="flex justify-between items-center pt-1 border-t border-slate-800">
-                    {selectedPlayer.user?.role !== 'SUPER_ADMIN' ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          handleTogglePodiumAdmin(selectedPlayer);
-                          setSelectedPlayer(null);
-                        }}
-                        className={selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'bg-red-950/50 hover:bg-red-900 border-red-800 text-red-200 text-xs font-bold rounded-xl' : 'bg-purple-950/60 hover:bg-purple-900 border-purple-700 text-purple-200 text-xs font-bold rounded-xl'}
+                      <Button 
+                        onClick={() => updatePlayerMutation.mutate()}
+                        disabled={updatePlayerMutation.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 h-10 rounded-xl text-xs flex items-center space-x-2"
                       >
-                        <Crown className="w-3.5 h-3.5 mr-1.5" />
-                        {selectedPlayer.user?.role === 'PODIUM_ADMIN' ? 'Revoke Podium Admin' : 'Promote to Podium Admin'}
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Save Scouting & Category Assignment</span>
                       </Button>
-                    ) : <div />}
-
-                    <Button 
-                      onClick={() => updatePlayerMutation.mutate()}
-                      disabled={updatePlayerMutation.isPending}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 h-10 rounded-xl text-xs flex items-center space-x-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Save Scouting & Category Assignment</span>
-                    </Button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Additional Info Cards */}
+                )}              {/* Additional Info Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                     <span className="text-slate-400 block font-medium">Jersey Name</span>
