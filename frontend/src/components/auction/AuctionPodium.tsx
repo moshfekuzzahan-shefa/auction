@@ -147,8 +147,8 @@ export const AuctionPodium = ({
 
             {/* 3D Shield Player Avatar */}
             <div className={`w-44 h-44 md:w-52 md:h-52 rounded-full border-4 ${categoryTheme.border} ${categoryTheme.glow} bg-slate-950 p-1 shadow-2xl overflow-hidden relative group-hover:scale-105 transition-transform duration-500`}>
-              {currentPlayer.publicId ? (
-                <img src={currentPlayer.publicId} alt={currentPlayer.user?.name} className="w-full h-full object-cover rounded-full" />
+              {currentPlayer.imageUrl ? (
+                <img src={currentPlayer.imageUrl} alt={currentPlayer.user?.name} className="w-full h-full object-cover rounded-full" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-6xl text-slate-700 bg-slate-900 rounded-full">⚽</div>
               )}
