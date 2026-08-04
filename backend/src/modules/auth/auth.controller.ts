@@ -99,4 +99,21 @@ export class AuthController {
       return sendErrorResponse({ res, statusCode: 400, message: error.message });
     }
   }
+
+  static async getMe(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        return sendErrorResponse({ res, statusCode: 401, message: 'Not authenticated' });
+      }
+
+      const user = await AuthService.getUserById(req.user.id);
+      if (!user) {
+        return sendErrorResponse({ res, statusCode: 404, message: 'User not found' });
+      }
+
+      return sendSuccessResponse({ res, data: { user } });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+    }
+  }
 }

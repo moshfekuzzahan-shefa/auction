@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { PublicLayout } from './layouts/PublicLayout';
@@ -8,8 +8,9 @@ import { ProtectedRoute } from './components/routing/ProtectedRoute';
 import { RoleProtectedRoute } from './components/routing/RoleProtectedRoute';
 import { PhaseProtectedRoute } from './components/routing/PhaseProtectedRoute';
 import { useQuery } from '@tanstack/react-query';
-import { useAppDispatch } from './store/hooks';
+import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setPhase } from './store/systemSlice';
+import { setCredentials, setInitializing, logout } from './store/authSlice';
 import api from './services/api';
 
 // Lazy loaded pages (handling named exports)
@@ -34,8 +35,6 @@ const SpectatorViewPage = lazy(() => import('./features/spectator/SpectatorViewP
 const ForgotPasswordPage = lazy(() => import('./features/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
 
-// Removed inline DashboardHome
-
 const PageLoader = () => (
   <div className="flex-1 flex items-center justify-center h-[50vh]">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -44,7 +43,9 @@ const PageLoader = () => (
 
 const GlobalSystemLoader = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useAppDispatch();
-  const { isLoading } = useQuery({
+  const { isInitializing } = useAppSelector((state) => state.auth);
+
+  const { isLoading: isPhaseLoading } = useQuery({
     queryKey: ['system', 'phase'],
     queryFn: async () => {
       try {
@@ -58,9 +59,40 @@ const GlobalSystemLoader = ({ children }: { children: React.ReactNode }) => {
     }
   });
 
-  // Optional: We could return a loader here, but returning children allows the app to load while fetching
-  // If we want to block until we know the phase:
-  if (isLoading) return <PageLoader />;
+  // Re-hydrate Auth State on initial load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      dispatch(setInitializing(false));
+      return;
+    }
+
+    api.get('/auth/me')
+      .then((res) => {
+        const user = res.data?.data?.user;
+        if (user) {
+          dispatch(setCredentials({ user, token }));
+        } else {
+          dispatch(setInitializing(false));
+        }
+      })
+      .catch(() => {
+        api.get('/player/me')
+          .then((res) => {
+            const user = res.data?.data?.user || res.data?.data;
+            if (user) {
+              dispatch(setCredentials({ user, token }));
+            } else {
+              dispatch(logout());
+            }
+          })
+          .catch(() => {
+            dispatch(logout());
+          });
+      });
+  }, [dispatch]);
+
+  if (isPhaseLoading || isInitializing) return <PageLoader />;
   
   return <>{children}</>;
 };

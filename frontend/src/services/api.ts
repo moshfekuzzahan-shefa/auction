@@ -35,7 +35,7 @@ async function getCsrfToken() {
 // Request Interceptor to append Authorization header and CSRF token
 api.interceptors.request.use(async (config) => {
   const state = store.getState();
-  const token = state.auth.token;
+  const token = state.auth.token || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
