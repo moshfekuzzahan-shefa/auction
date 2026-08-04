@@ -29,7 +29,7 @@ router.use('/update', authenticate, authorize('PLAYER'), requirePhase('REGISTRAT
 router.use('/withdraw', authenticate, authorize('PLAYER'), requirePhase('REGISTRATION'));
 
 router.get('/unsold', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN', 'TEAM_MANAGER'), PlayerController.getUnsoldPlayers);
-router.get('/all', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), PlayerController.getAllPlayers);
+router.get('/all', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN', 'TEAM_MANAGER'), PlayerController.getAllPlayers);
 
 // Register is public but requires the REGISTRATION phase
 router.post(
