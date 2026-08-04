@@ -256,8 +256,8 @@ export const LiveAuctionPublicPodium = ({ message, announcement, data, schedule 
               className="flex flex-col items-center p-3 border border-slate-800 rounded-2xl bg-slate-900/80 shadow-md opacity-90 hover:opacity-100 hover:scale-105 transition-all duration-300"
             >
               <div className="w-14 h-14 rounded-full overflow-hidden bg-slate-950 mb-2 border-2 border-slate-700 shadow-md flex-shrink-0 flex items-center justify-center">
-                {player.publicId ? (
-                  <img src={player.publicId} alt={player.user.name} className="w-full h-full object-cover" />
+                {player.imageUrl ? (
+                  <img src={player.imageUrl} alt={player.user.name} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xl opacity-40">⚽</span>
                 )}

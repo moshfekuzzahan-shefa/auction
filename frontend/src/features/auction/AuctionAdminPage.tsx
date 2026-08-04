@@ -365,8 +365,8 @@ export const AuctionAdminPage = () => {
                 className={`relative group flex flex-col items-center justify-center p-4 border-2 rounded-2xl cursor-grab active:cursor-grabbing hover:border-emerald-500 hover:shadow-lg transition-all ${selectedPlayerId === player.userId ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950'}`}
               >
                 <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-900 mb-3 flex-shrink-0 border-2 border-slate-800 shadow-sm flex items-center justify-center">
-                  {player.publicId ? (
-                    <img src={player.publicId} alt={player.user.name} className="w-full h-full object-cover" />
+                  {player.imageUrl ? (
+                    <img src={player.imageUrl} alt={player.user.name} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-2xl opacity-40">⚽</span>
                   )}
