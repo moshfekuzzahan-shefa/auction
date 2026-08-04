@@ -7,5 +7,7 @@ const router = Router();
 
 // Protect with PODIUM_ADMIN and SUPER_ADMIN roles
 router.get('/history', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), AuctionController.getHistory);
+router.get('/bid-rules', authenticate, AuctionController.getBidRaiseRules);
+router.post('/bid-rules', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), AuctionController.updateBidRaiseRules);
 
 export default router;

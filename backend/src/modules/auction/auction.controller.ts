@@ -32,4 +32,41 @@ export class AuctionController {
       next(error);
     }
   }
+
+  static async getBidRaiseRules(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rules = await prisma.bidRaiseRule.findMany({
+        include: { category: true },
+        orderBy: { minPrice: 'asc' }
+      });
+      res.status(200).json({ success: true, data: rules });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateBidRaiseRules(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rulesArray = Array.isArray(req.body) ? req.body : (req.body.rules || []);
+      const updatedRules = await prisma.$transaction(async (tx) => {
+        await tx.bidRaiseRule.deleteMany({});
+        if (rulesArray.length > 0) {
+          await tx.bidRaiseRule.createMany({
+            data: rulesArray.map((r: any) => ({
+              minPrice: Number(r.minPrice) || 0,
+              maxPrice: Number(r.maxPrice) || 100000,
+              incrementType: r.incrementType === 'FIXED' ? 'FIXED' : 'PERCENT',
+              incrementValue: Number(r.incrementValue) || 10,
+              categoryId: r.categoryId && String(r.categoryId).trim() !== '' ? String(r.categoryId) : null
+            }))
+          });
+        }
+        return tx.bidRaiseRule.findMany({ include: { category: true }, orderBy: { minPrice: 'asc' } });
+      });
+
+      res.status(200).json({ success: true, message: 'Bid raise rules updated successfully', data: updatedRules });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -1115,13 +1115,28 @@ export const AdminDashboard = () => {
 
                 <Button
                   type="button"
-                  onClick={() => {
-                    api.put('/system/rules', { rules: slabRules })
-                      .then(() => {
+                  onClick={async () => {
+                    const formattedRules = slabRules.map(r => ({
+                      ...r,
+                      minPrice: Number(r.minPrice) || 0,
+                      maxPrice: Number(r.maxPrice) || 100000,
+                      incrementValue: Number(r.incrementValue) || 10,
+                      categoryId: r.categoryId && String(r.categoryId).trim() !== '' ? String(r.categoryId) : null
+                    }));
+
+                    try {
+                      await api.post('/auction/bid-rules', { rules: formattedRules });
+                      toast.success('Auction Price Range Slabs saved successfully!');
+                      queryClient.invalidateQueries();
+                    } catch (err) {
+                      try {
+                        await api.put('/system/rules', { rules: formattedRules });
                         toast.success('Auction Price Range Slabs saved successfully!');
                         queryClient.invalidateQueries();
-                      })
-                      .catch(() => toast.error('Failed to save bid rules'));
+                      } catch (error) {
+                        toast.error('Failed to save price range slabs');
+                      }
+                    }
                   }}
                   className="w-full sm:w-auto h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 rounded-xl shadow-lg flex items-center space-x-2"
                 >

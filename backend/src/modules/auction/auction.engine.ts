@@ -316,7 +316,9 @@ export class AuctionEngine {
   }
 
   public async calculateNextBid(): Promise<{ minimumRaise: number, nextValidBid: number, incrementType: string, incrementValue: number }> {
-    if (this.status !== 'ACTIVE') return { minimumRaise: 0, nextValidBid: this.currentBid, incrementType: 'PERCENT', incrementValue: 10 };
+    if (this.status !== 'ACTIVE') {
+      return { minimumRaise: 0, nextValidBid: this.currentBid, incrementType: 'PERCENT', incrementValue: 10 };
+    }
 
     // If no leader team has placed a bid yet, initial bid is Base Price itself
     if (!this.currentLeaderId) {
@@ -326,8 +328,13 @@ export class AuctionEngine {
     // Fetch player category if currentPlayerId exists
     let playerCategoryId: string | null = null;
     if (this.currentPlayerId) {
-      const player = await prisma.profile.findUnique({
-        where: { userId: this.currentPlayerId },
+      const player = await prisma.profile.findFirst({
+        where: {
+          OR: [
+            { userId: this.currentPlayerId },
+            { id: this.currentPlayerId }
+          ]
+        },
         select: { categoryId: true }
       });
       playerCategoryId = player?.categoryId || null;
@@ -343,24 +350,31 @@ export class AuctionEngine {
     let incrementValue = 10;
 
     if (rules.length > 0) {
-      // Priority 1: Match BOTH player category AND price range
-      // Priority 2: Match ALL categories rule (categoryId is null) AND price range
-      // Priority 3: Any rule matching price range
-      let categoryRules = rules.filter(r => r.categoryId === playerCategoryId);
-      if (categoryRules.length === 0) {
-        categoryRules = rules.filter(r => !r.categoryId);
-      }
-      if (categoryRules.length === 0) {
-        categoryRules = rules;
+      // Step a: Search for a BidRaiseRule where categoryId == player.categoryId AND current price is between minPrice and maxPrice
+      let matchingRule = playerCategoryId 
+        ? rules.find(r => r.categoryId === playerCategoryId && this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice)
+        : null;
+
+      // Step b: Fallback to categoryId == null (Universal / ALL rule) matching price range
+      if (!matchingRule) {
+        matchingRule = rules.find(r => !r.categoryId && this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice);
       }
 
-      const matchingRule = categoryRules.find(r => this.currentBid >= r.minPrice && this.currentBid <= r.maxPrice) 
-        || categoryRules[categoryRules.length - 1];
+      // Nearest fallback: match category rules or highest rule
+      if (!matchingRule && playerCategoryId) {
+        const catRules = rules.filter(r => r.categoryId === playerCategoryId);
+        if (catRules.length > 0) matchingRule = catRules[catRules.length - 1];
+      }
+
+      if (!matchingRule) {
+        matchingRule = rules[rules.length - 1];
+      }
 
       if (matchingRule) {
         incrementType = (matchingRule as any).incrementType || 'PERCENT';
         incrementValue = matchingRule.incrementValue || 10;
 
+        // Step c: Calculate increment
         if (incrementType === 'PERCENT') {
           minimumRaise = Math.ceil(this.currentBid * (incrementValue / 100));
         } else {
@@ -368,6 +382,10 @@ export class AuctionEngine {
         }
       }
     }
+
+    // Step d: Enforce global minimum raise fallback ($10 minimum increment)
+    const globalMinIncrement = 10;
+    minimumRaise = Math.max(minimumRaise, globalMinIncrement);
 
     const nextValidBid = this.currentBid + minimumRaise;
     return { minimumRaise, nextValidBid, incrementType, incrementValue };
