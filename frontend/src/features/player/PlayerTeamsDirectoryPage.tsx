@@ -89,11 +89,12 @@ export const PlayerTeamsDirectoryPage = () => {
             return (
               <Card 
                 key={t.id}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   setSelectedTeam(t);
                   setIsModalOpen(true);
                 }}
-                className="bg-slate-900/90 border-slate-800 hover:border-emerald-500/50 shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 overflow-hidden group"
+                className="bg-slate-900/90 border-slate-800 hover:border-emerald-500/50 shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 overflow-hidden group relative z-0"
               >
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-4">
@@ -131,11 +132,12 @@ export const PlayerTeamsDirectoryPage = () => {
                   <Button 
                     type="button"
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       setSelectedTeam(t);
                       setIsModalOpen(true);
                     }}
-                    className="w-full mt-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-md"
+                    className="relative z-10 pointer-events-auto w-full mt-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-md"
                   >
                     <span>View Roster & Player Profiles</span>
                     <span className="text-sm font-bold">→</span>
