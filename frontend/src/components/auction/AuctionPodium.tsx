@@ -30,9 +30,16 @@ export const AuctionPodium = ({
   const timer = auctionState?.timer ?? 30;
   const status = auctionState?.status || 'IDLE';
   const currentLeaderId = auctionState?.currentLeaderId;
-  const nextValidBid = auctionState?.nextValidBid || currentBid + 50;
   const incrementType = auctionState?.incrementType || 'PERCENT';
   const incrementValue = auctionState?.incrementValue || 10;
+
+  const computedIncrement = incrementType === 'FIXED' 
+    ? (incrementValue || 100) 
+    : Math.ceil(currentBid * ((incrementValue || 10) / 100));
+
+  const calculatedNextBid = currentLeaderId 
+    ? Math.max(currentBid + Math.max(computedIncrement, 1), auctionState?.nextValidBid || (currentBid + Math.max(computedIncrement, 1)))
+    : (auctionState?.nextValidBid || currentBid);
 
   const categoryTheme = getCategoryTheme(currentPlayer?.category?.name);
   const leadingTeam = teams.find((t) => t.id === currentLeaderId);
@@ -257,17 +264,30 @@ export const AuctionPodium = ({
             {/* Bidding Action Button for Managers */}
             {!isReadOnly && status === 'ACTIVE' && onPlaceBid && (myTeam || userRole === 'TEAM_MANAGER' || userRole === 'SUPER_ADMIN' || userRole === 'PODIUM_ADMIN') && (
               <div className="pt-2">
-                <Button 
-                  size="lg"
-                  onClick={() => onPlaceBid(nextValidBid)}
-                  className="w-full h-12 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 border border-emerald-400/40"
-                >
-                  <Zap className="w-4 h-4 text-amber-300" />
-                  <span>
-                    Raise Bid ({incrementType === 'FIXED' ? `+$${(incrementValue || 100).toLocaleString()}` : `+${incrementValue || 10}%`} → ${nextValidBid.toLocaleString()})
-                  </span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </Button>
+                {currentLeaderId && myTeam && currentLeaderId === myTeam.id ? (
+                  <Button 
+                    size="lg"
+                    disabled
+                    className="w-full h-12 bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold text-sm rounded-xl cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span>Your Team is Currently Leading (${currentBid.toLocaleString()})</span>
+                  </Button>
+                ) : (
+                  <Button 
+                    size="lg"
+                    onClick={() => onPlaceBid(calculatedNextBid)}
+                    className="w-full h-12 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 border border-emerald-400/40 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    <span>
+                      {currentLeaderId 
+                        ? `Raise Bid (${incrementType === 'FIXED' ? `+$${(incrementValue || 100).toLocaleString()}` : `+${incrementValue || 10}%`} → $${calculatedNextBid.toLocaleString()})`
+                        : `Place Opening Bid ($${calculatedNextBid.toLocaleString()})`}
+                    </span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             )}
           </div>
