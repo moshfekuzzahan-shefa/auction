@@ -10,7 +10,7 @@ import api from '../../services/api';
 export const PlayerTeamsDirectoryPage = () => {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
 
-  const { data: landingData, isLoading } = useQuery({
+  const { data: landingData, isLoading: landingLoading } = useQuery({
     queryKey: ['public', 'landing'],
     queryFn: async () => {
       const res = await api.get('/public/landing');
@@ -18,7 +18,23 @@ export const PlayerTeamsDirectoryPage = () => {
     }
   });
 
-  const teams = landingData?.teams || [];
+  const { data: teamsData, isLoading: teamsLoading } = useQuery({
+    queryKey: ['teams', 'all'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/teams');
+        return res.data.data || res.data;
+      } catch (err) {
+        return [];
+      }
+    }
+  });
+
+  const teams = (teamsData && Array.isArray(teamsData) && teamsData.length > 0)
+    ? teamsData 
+    : (landingData?.teams || []);
+
+  const isLoading = landingLoading && teamsLoading;
 
   if (isLoading) {
     return (

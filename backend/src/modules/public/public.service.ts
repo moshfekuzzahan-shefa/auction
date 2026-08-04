@@ -21,6 +21,26 @@ export class PublicService {
       }
     };
 
+    const teams = await prisma.team.findMany({
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        budget: true,
+        managerId: true,
+        _count: { select: { players: true } },
+        players: {
+          select: {
+            id: true,
+            primaryPos: true,
+            user: { select: { name: true } },
+            category: { select: { name: true } }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
     switch (phase) {
       case 'SETUP':
         return {
@@ -28,7 +48,8 @@ export class PublicService {
           message: 'Coming Soon: The event is currently being configured.',
           data: {
             categories,
-            positions
+            positions,
+            teams
           }
         };
         
@@ -39,6 +60,7 @@ export class PublicService {
           data: {
             categories,
             positions,
+            teams,
             sessions: await prisma.academicSession.findMany(),
           }
         };
@@ -50,22 +72,7 @@ export class PublicService {
           data: {
             categories,
             positions,
-            teams: await prisma.team.findMany({
-              select: {
-                id: true,
-                name: true,
-                logoUrl: true,
-                budget: true,
-                managerId: true,
-                _count: { select: { players: true } },
-                players: {
-                  select: {
-                    id: true,
-                    category: { select: { name: true } }
-                  }
-                }
-              }
-            })
+            teams
           }
         };
 
@@ -76,6 +83,7 @@ export class PublicService {
           data: {
             categories,
             positions,
+            teams,
             standings: await TournamentService.getStandings(),
             matches: {
               live: await prisma.match.findMany({ where: { status: 'LIVE' }, include: { homeTeam: true, awayTeam: true } }),
