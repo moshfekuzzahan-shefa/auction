@@ -69,4 +69,32 @@ export class AuctionController {
       next(error);
     }
   }
+
+  static async pullPlayerToStage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = (req as any).user;
+      if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'PODIUM_ADMIN')) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: Only Podium Admins or Super Admins can pull players onto the stage."
+        });
+      }
+
+      const { playerId, mode, basePrice, timerSeconds } = req.body;
+      if (!playerId) {
+        return res.status(400).json({ success: false, message: 'playerId is required' });
+      }
+
+      const { getAuctionEngine } = await import('../../sockets/socketStore');
+      const engine = getAuctionEngine();
+      if (!engine) {
+        return res.status(500).json({ success: false, message: 'Auction engine is not initialized' });
+      }
+
+      await engine.startAuction(playerId, mode || 'NORMAL', basePrice, timerSeconds || 30);
+      res.status(200).json({ success: true, message: 'Player pulled onto podium stage successfully' });
+    } catch (error: any) {
+      res.status(400).json({ success: false, message: error.message || 'Failed to pull player to stage' });
+    }
+  }
 }

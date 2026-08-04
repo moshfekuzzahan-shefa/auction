@@ -39,32 +39,55 @@ export const setupSockets = (httpServer: HttpServer) => {
 
   setSocketIo(io);
   auctionEngine = new AuctionEngine(io);
+  const { setAuctionEngine } = require('./socketStore');
+  setAuctionEngine(auctionEngine);
 
   // Authentication Middleware
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token || socket.handshake.headers?.token;
-      if (!token) return next(new Error('Authentication error: Token missing'));
+      if (!token) {
+        socket.data.user = { role: 'GUEST', id: 'guest_' + socket.id };
+        return next();
+      }
 
       const decoded = verifyToken(token as string);
-      if (!decoded) return next(new Error('Authentication error: Invalid token'));
+      if (!decoded || !decoded.id) {
+        socket.data.user = { role: 'GUEST', id: 'guest_' + socket.id };
+        return next();
+      }
 
-      socket.data.user = decoded;
+      // Fetch fresh user record from DB to guarantee role & details are 100% accurate
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, role: true, email: true, name: true }
+      });
 
-      // Dynamically resolve teamId if not present in JWT payload
-      if (decoded.id) {
-        const team = await prisma.team.findFirst({
-          where: { managerId: decoded.id }
-        });
-        if (team) {
-          socket.data.user.teamId = team.id;
-        }
+      if (!user) {
+        socket.data.user = { role: 'GUEST', id: 'guest_' + socket.id };
+        return next();
+      }
+
+      socket.data.user = {
+        id: user.id,
+        role: user.role,
+        email: user.email,
+        name: user.name
+      };
+
+      // Dynamically resolve teamId if manager
+      const team = await prisma.team.findFirst({
+        where: { managerId: user.id }
+      });
+      if (team) {
+        socket.data.user.teamId = team.id;
       }
 
       next();
     } catch (err: any) {
       logger.error('Socket auth middleware error:', err);
-      next(new Error('Authentication error: ' + (err.message || 'Unauthorized')));
+      socket.data.user = { role: 'GUEST', id: 'guest_' + socket.id };
+      next();
     }
   });
 

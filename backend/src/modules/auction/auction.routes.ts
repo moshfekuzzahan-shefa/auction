@@ -10,4 +10,7 @@ router.get('/history', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), A
 router.get('/bid-rules', authenticate, AuctionController.getBidRaiseRules);
 router.post('/bid-rules', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), AuctionController.updateBidRaiseRules);
 
+router.post('/stage', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), AuctionController.pullPlayerToStage);
+router.post('/pull', authenticate, authorize('SUPER_ADMIN', 'PODIUM_ADMIN'), AuctionController.pullPlayerToStage);
+
 export default router;
