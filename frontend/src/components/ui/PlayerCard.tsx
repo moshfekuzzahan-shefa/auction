@@ -99,9 +99,9 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect */}
-      <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2 bg-transparent">
-        <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-white/20 shadow-lg ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/60 relative">
+      {/* LAYER 3: Fixed Circular Avatar Container with Zoom Effect (Matches Watermark Bounds) */}
+      <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2 bg-transparent">
+        <div className="w-48 h-48 sm:w-52 sm:h-52 rounded-full overflow-hidden border-2 border-white/25 shadow-2xl ring-4 ring-slate-950/80 mx-auto flex items-center justify-center bg-slate-950/70 relative">
           {rawPhotoUrl ? (
             <img 
               src={rawPhotoUrl} 
@@ -110,7 +110,7 @@ export const PlayerCard = ({
               loading="lazy"
             />
           ) : (
-            <svg className="w-24 h-24 text-slate-700 fill-current mt-4" viewBox="0 0 24 24">
+            <svg className="w-32 h-32 text-slate-700 fill-current mt-6" viewBox="0 0 24 24">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
           )}
