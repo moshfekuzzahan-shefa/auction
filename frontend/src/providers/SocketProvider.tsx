@@ -21,18 +21,20 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   const { token, isAuthenticated } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    if (isAuthenticated && token && !socketInstance) {
-      // Support dedicated persistent socket URL (e.g. Render backend) or fallback to VITE_API_URL
-      const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'https://auctionbyshefa.onrender.com';
-      const cleanUrl = rawUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+    // Determine target socket server URL
+    const rawUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://auctionbyshefa.onrender.com');
+    const cleanUrl = rawUrl.replace(/\/+$/, '').replace(/\/api$/, '');
 
+    if (!socketInstance) {
       socketInstance = io(cleanUrl, {
-        auth: { token },
+        auth: { token: token || '' },
         transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 10,
         reconnectionDelay: 1000,
         timeout: 10000,
       });
+
+      setSocket(socketInstance);
 
       socketInstance.on('connect', () => {
         console.log('Connected to WebSocket server:', cleanUrl);
@@ -45,18 +47,16 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
       socketInstance.on('disconnect', () => {
         console.log('Disconnected from WebSocket server');
-        setSocket(null);
       });
+    } else {
+      // Update token on existing socket connection if user logged in or token refreshed
+      socketInstance.auth = { token: token || '' };
+      if (!socketInstance.connected) {
+        socketInstance.connect();
+      }
+      setSocket(socketInstance);
     }
-  }, [isAuthenticated, token]);
-
-  useEffect(() => {
-    if (!isAuthenticated && socketInstance) {
-      socketInstance.disconnect();
-      socketInstance = null;
-      setSocket(null);
-    }
-  }, [isAuthenticated]);
+  }, [token, isAuthenticated]);
 
   return (
     <SocketContext.Provider value={{ socket }}>

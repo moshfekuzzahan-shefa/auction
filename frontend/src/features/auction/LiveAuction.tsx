@@ -17,27 +17,39 @@ export const LiveAuction = () => {
 
     socket.emit('JOIN_AUCTION_ROOM');
 
-    socket.on('AUCTION_STATE', (state) => {
+    const handleState = (state: any) => {
       setAuctionState(state);
-    });
+    };
 
-    socket.on('TIMER_TICK', ({ timer }) => {
+    const handleTick = ({ timer }: any) => {
       setAuctionState((prev: any) => prev ? { ...prev, timer } : null);
-    });
+    };
     
-    socket.on('BID_PLACED', ({ teamId, amount }) => {
+    const handleBidPlaced = ({ teamId, amount }: any) => {
       setAuctionState((prev: any) => prev ? { ...prev, currentBid: amount, currentLeaderId: teamId } : null);
-    });
+    };
 
-    socket.on('SUCCESS', (msg) => toast.success(msg));
-    socket.on('ERROR', (msg) => toast.error(msg));
+    const handleSuccess = (msg: string) => toast.success(msg);
+    const handleError = (msg: string) => toast.error(msg);
+
+    const handleConnect = () => {
+      socket.emit('JOIN_AUCTION_ROOM');
+    };
+
+    socket.on('AUCTION_STATE', handleState);
+    socket.on('TIMER_TICK', handleTick);
+    socket.on('BID_PLACED', handleBidPlaced);
+    socket.on('SUCCESS', handleSuccess);
+    socket.on('ERROR', handleError);
+    socket.on('connect', handleConnect);
 
     return () => {
-      socket.off('AUCTION_STATE');
-      socket.off('TIMER_TICK');
-      socket.off('BID_PLACED');
-      socket.off('SUCCESS');
-      socket.off('ERROR');
+      socket.off('AUCTION_STATE', handleState);
+      socket.off('TIMER_TICK', handleTick);
+      socket.off('BID_PLACED', handleBidPlaced);
+      socket.off('SUCCESS', handleSuccess);
+      socket.off('ERROR', handleError);
+      socket.off('connect', handleConnect);
     };
   }, [socket]);
 
