@@ -5,8 +5,6 @@ import { setupSockets } from './sockets';
 import logger from './utils/logger';
 import { seedSuperAdmin } from './utils/seed';
 
-import { execSync } from 'child_process';
-
 const PORT = parseInt(process.env.PORT || '10000', 10);
 
 // Create HTTP Server
@@ -17,11 +15,6 @@ setupSockets(server);
 
 // Start Server - Bind explicitly to 0.0.0.0 for Render's reverse proxy routing
 server.listen(PORT, '0.0.0.0', async () => {
-  try {
-    execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-  } catch (dbErr) {
-    if (logger) logger.error('DB push on boot warning:', dbErr);
-  }
 
   try {
     await seedSuperAdmin();
