@@ -88,8 +88,9 @@ export const seedSuperAdmin = async () => {
     const rulesCount = await prisma.bidRaiseRule.count();
     if (rulesCount === 0) {
       const defaultRules = [
-        { minBudgetPercent: 0.0, maxBudgetPercent: 0.03, raisePercent: 0.0015 },
-        { minBudgetPercent: 0.03, maxBudgetPercent: 1.0, raisePercent: 0.005 },
+        { minPrice: 0, maxPrice: 1000, incrementType: 'PERCENT' as const, incrementValue: 10 },
+        { minPrice: 1001, maxPrice: 5000, incrementType: 'PERCENT' as const, incrementValue: 5 },
+        { minPrice: 5001, maxPrice: 100000, incrementType: 'FIXED' as const, incrementValue: 500 },
       ];
       await prisma.bidRaiseRule.createMany({
         data: defaultRules

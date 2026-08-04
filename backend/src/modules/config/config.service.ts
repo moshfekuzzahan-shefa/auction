@@ -36,11 +36,11 @@ export class ConfigService {
 
   // --- Bid Raise Rules ---
   static async getBidRaiseRules() {
-    return prisma.bidRaiseRule.findMany();
+    return prisma.bidRaiseRule.findMany({ orderBy: { minPrice: 'asc' } });
   }
-  static async createBidRaiseRule(minPercent: number, maxPercent: number, raisePercent: number) {
+  static async createBidRaiseRule(minPrice: number, maxPrice: number, incrementType: 'PERCENT' | 'FIXED' = 'PERCENT', incrementValue: number = 10) {
     return prisma.bidRaiseRule.create({
-      data: { minBudgetPercent: minPercent, maxBudgetPercent: maxPercent, raisePercent }
+      data: { minPrice, maxPrice, incrementType: incrementType as any, incrementValue }
     });
   }
   static async deleteBidRaiseRule(id: string) {
