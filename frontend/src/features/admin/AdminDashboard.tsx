@@ -324,7 +324,58 @@ export const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* 1.1 Category Tiers & Base Prices Configuration */}
+          {/* 1.1 Registration Schedule & Countdowns Setup */}
+          <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
+            <CardHeader className="bg-slate-950/80 border-b border-slate-800">
+              <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <span>Registration Schedule & Countdowns</span>
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Configure player registration opening and closing dates before initiating the registration phase.
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration Start Date & Time</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.registrationStart}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationStart: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-slate-300">Registration Deadline (End)</label>
+                  <Input 
+                    type="datetime-local"
+                    value={scheduleConfig.registrationEnd}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, registrationEnd: e.target.value }))}
+                    className="bg-slate-950 border-slate-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={() => {
+                    api.put('/system/schedule', scheduleConfig)
+                      .then(() => {
+                        toast.success('Registration Schedule saved!');
+                        queryClient.invalidateQueries();
+                      })
+                      .catch(() => toast.error('Failed to save schedule'));
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 font-bold text-xs px-6 h-10 rounded-xl"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Registration Timers
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 1.2 Category Tiers & Base Prices Configuration */}
           <Card className="bg-slate-900/90 border-slate-800 shadow-xl">
             <CardHeader className="bg-slate-950/80 border-b border-slate-800">
               <CardTitle className="text-lg font-bold text-white flex items-center space-x-2">
