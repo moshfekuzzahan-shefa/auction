@@ -247,7 +247,7 @@ export class PlayerService {
         SET "categoryId" = ${catIdToSet},
             "basePrice" = ${priceToSet},
             "hasUnreadAdminUpdates" = true,
-            "lastAdminChange" = ${changeMsg}
+            "lastAdminChange" = ${changeMsg}::text
         WHERE "id" = ${targetProfileId}
       `;
     } else {

@@ -24,4 +24,11 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+// Auto-migrate column type for lastAdminChange in PostgreSQL to TEXT
+prisma.$executeRawUnsafe(`
+  ALTER TABLE "Profile" ALTER COLUMN "lastAdminChange" TYPE TEXT USING "lastAdminChange"::text;
+`).catch(() => {
+  // Silent catch if column is already text or table busy
+});
+
 export default prisma;
