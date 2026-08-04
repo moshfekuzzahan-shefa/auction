@@ -2,8 +2,15 @@ import { PrismaClient } from '@prisma/client';
 
 let databaseUrl = process.env.DATABASE_URL;
 
-if (databaseUrl && !databaseUrl.includes('pgbouncer=true') && (databaseUrl.includes('pooler') || databaseUrl.includes('6543'))) {
-  databaseUrl += databaseUrl.includes('?') ? '&pgbouncer=true' : '?pgbouncer=true';
+if (databaseUrl) {
+  if (databaseUrl.includes('pooler') || databaseUrl.includes('6543') || databaseUrl.includes('supabase')) {
+    if (!databaseUrl.includes('pgbouncer=true')) {
+      databaseUrl += databaseUrl.includes('?') ? '&pgbouncer=true' : '?pgbouncer=true';
+    }
+    if (!databaseUrl.includes('statement_cache_size=0')) {
+      databaseUrl += databaseUrl.includes('?') ? '&statement_cache_size=0' : '?statement_cache_size=0';
+    }
+  }
 }
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
