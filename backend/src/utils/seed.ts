@@ -17,6 +17,13 @@ export const seedSuperAdmin = async () => {
   } catch (err) { logger.error('Super Admin seed error:', err); }
 
   try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "BidRaiseRule" ADD COLUMN IF NOT EXISTS "categoryId" TEXT;
+    `);
+    logger.info('BidRaiseRule.categoryId column schema verified/created successfully');
+  } catch (err) { logger.error('BidRaiseRule categoryId schema check warning:', err); }
+
+  try {
     const systemStateExists = await prisma.systemState.findFirst();
     if (!systemStateExists) {
       await prisma.systemState.create({
