@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Card } from './Card';
 import { Badge } from './Badge';
-import { Trophy, Crown, GraduationCap } from 'lucide-react';
+import { Trophy, Crown, GraduationCap, Loader2 } from 'lucide-react';
+import { getPlayerCutout } from '../../utils/cutoutProcessor';
 
 interface PlayerCardProps {
   player: any;
@@ -65,16 +67,43 @@ export const PlayerCard = ({
   const jerseyNum = player.jerseyName || (player.studentId ? player.studentId.slice(-2) : '10');
   const rawPhotoUrl = player.imageUrl || player.publicId;
 
-  // Cloudinary AI Background Removal Cutout URL Transformation helper
-  const getCutoutUrl = (url?: string) => {
-    if (!url) return null;
-    if (url.includes('res.cloudinary.com') && !url.includes('e_background_removal')) {
-      return url.replace('/upload/', '/upload/e_background_removal/');
-    }
-    return url;
-  };
+  // Background Removal Cutout Processing State
+  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<boolean>(!!rawPhotoUrl);
+  const [hasCutoutError, setHasCutoutError] = useState<boolean>(false);
 
-  const cutoutUrl = getCutoutUrl(rawPhotoUrl);
+  useEffect(() => {
+    let isMounted = true;
+    if (!rawPhotoUrl) {
+      setIsProcessing(false);
+      return;
+    }
+
+    setIsProcessing(true);
+    setHasCutoutError(false);
+
+    getPlayerCutout(rawPhotoUrl)
+      .then((url) => {
+        if (isMounted) {
+          if (url) {
+            setCutoutUrl(url);
+          } else {
+            setHasCutoutError(true);
+          }
+          setIsProcessing(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasCutoutError(true);
+          setIsProcessing(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [rawPhotoUrl]);
 
   const handleCardClick = () => {
     if (isAssignPodiumAdminMode && onTogglePodiumAdmin) {
@@ -91,7 +120,7 @@ export const PlayerCard = ({
   return (
     <Card 
       onClick={handleCardClick}
-      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer min-h-[420px] ${
+      className={`transition-all duration-500 group overflow-hidden relative flex flex-col justify-between rounded-3xl border-2 shadow-2xl cursor-pointer min-h-[430px] ${
         isAssignPodiumAdminMode 
           ? 'ring-4 ring-purple-500 shadow-[0_0_35px_rgba(168,85,247,0.8)] scale-[1.02] border-purple-400' 
           : `${theme.border} hover:-translate-y-2 hover:shadow-[0_0_35px_rgba(255,255,255,0.2)]`
@@ -110,20 +139,35 @@ export const PlayerCard = ({
       {/* Ambient Top Glow */}
       <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none z-1" />
 
-      {/* LAYER 3: Centered Cutout Subject Image */}
-      <div className="absolute inset-0 flex items-center justify-center pt-8 pb-32 pointer-events-none z-2">
-        {cutoutUrl ? (
+      {/* LAYER 3: Centered Transparent Cutout Subject Image with Overflow & Fallback */}
+      <div className="absolute inset-0 flex items-center justify-center pt-6 pb-32 pointer-events-none z-2">
+        {isProcessing ? (
+          /* Loading Skeletal Shimmer & Spinner */
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className="w-40 h-52 bg-slate-900/60 rounded-t-full border border-white/10 animate-pulse flex items-center justify-center shadow-xl">
+              <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase animate-pulse">Processing...</span>
+          </div>
+        ) : cutoutUrl && !hasCutoutError ? (
+          /* Transparent Cutout with 3D Depth Overflow */
           <img 
             src={cutoutUrl} 
             alt={player.user?.name} 
-            className="w-48 h-56 object-contain object-bottom transition-transform duration-700 group-hover:scale-105 drop-shadow-[0_15px_30px_rgba(0,0,0,0.9)]"
-            onError={(e) => {
-              if (rawPhotoUrl && (e.target as HTMLImageElement).src !== rawPhotoUrl) {
-                (e.target as HTMLImageElement).src = rawPhotoUrl;
-              }
-            }}
+            className="w-52 h-60 object-contain object-bottom scale-110 -translate-y-2 group-hover:scale-115 transition-transform duration-500 drop-shadow-[0_20px_35px_rgba(0,0,0,0.95)]"
+            onError={() => setHasCutoutError(true)}
           />
+        ) : rawPhotoUrl ? (
+          /* Fail-Safe Circular Avatar Fallback Container */
+          <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-emerald-400/50 ring-4 ring-slate-950/80 shadow-2xl relative mb-4">
+            <img 
+              src={rawPhotoUrl} 
+              alt={player.user?.name} 
+              className="w-full h-full object-cover object-center"
+            />
+          </div>
         ) : (
+          /* Default Silhouette Placeholder */
           <div className="w-44 h-52 bg-slate-950/80 rounded-t-full border border-white/10 flex items-end justify-center shadow-2xl overflow-hidden relative opacity-70">
             <svg className="w-36 h-44 text-slate-800 fill-current" viewBox="0 0 24 24">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
@@ -197,7 +241,7 @@ export const PlayerCard = ({
 
       {/* 
         =========================================================
-        GLASSMORTIC BOTTOM DETAILS CONTAINER (Blends Seamlessly)
+        GLASSMORPHIC BOTTOM DETAILS CONTAINER (Blends Seamlessly)
         =========================================================
       */}
       <div className="relative z-10 p-4 pt-6">
