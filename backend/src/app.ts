@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import { errorHandler } from './middleware/error.middleware';
 import routes from './modules';
 import hpp from 'hpp';
@@ -40,6 +41,9 @@ const isOriginAllowed = (origin: string | undefined): boolean => {
   }
   return true; // Allow all valid origins in production
 };
+
+// Enable gzip/brotli compression
+app.use(compression());
 
 // Security and utility middlewares
 app.use(helmet({

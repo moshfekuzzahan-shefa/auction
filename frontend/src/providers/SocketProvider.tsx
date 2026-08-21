@@ -28,7 +28,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     if (!socketInstance) {
       socketInstance = io(cleanUrl, {
         auth: { token: token || '' },
-        transports: ['websocket', 'polling'],
+        transports: ['websocket'],
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
         timeout: 10000,

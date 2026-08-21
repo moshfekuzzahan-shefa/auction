@@ -4,6 +4,9 @@ import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Trophy, Gavel, Shield, Activity, Flame, ArrowUpRight, Zap, Crown } from 'lucide-react';
 import { getCategoryTheme } from '../../utils/categoryTheme';
+import { TacticalRadar } from './TacticalRadar';
+import { PlayerAttributesCard } from './PlayerAttributesCard';
+import { LiveCountdown } from './LiveCountdown';
 
 interface AuctionPodiumProps {
   auctionState: any;
@@ -84,27 +87,6 @@ export const AuctionPodium = ({
     }
   }, [currentBid, currentLeaderId]);
 
-  // Position coordinates on 2D tactical pitch
-  const getPitchCoords = (pos: string = 'CM') => {
-    const code = pos.toUpperCase();
-    if (code.includes('GK')) return { top: '82%', left: '50%' };
-    if (code.includes('CB')) return { top: '68%', left: '50%' };
-    if (code.includes('LB')) return { top: '68%', left: '20%' };
-    if (code.includes('RB')) return { top: '68%', left: '80%' };
-    if (code.includes('LW')) return { top: '28%', left: '22%' };
-    if (code.includes('RW')) return { top: '28%', left: '78%' };
-    if (code.includes('ST') || code.includes('CF')) return { top: '20%', left: '50%' };
-    return { top: '48%', left: '50%' }; // Midfield CM/CAM/CDM
-  };
-
-  const coords = getPitchCoords(currentPlayer?.primaryPos);
-
-  // Timer Color Class
-  const getTimerColorClass = (t: number) => {
-    if (t <= 5) return 'text-red-400 bg-red-950/80 border-red-600 animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.6)]';
-    if (t <= 12) return 'text-amber-400 bg-amber-950/70 border-amber-600 shadow-[0_0_20px_rgba(245,158,11,0.4)]';
-    return 'text-emerald-400 bg-slate-950/90 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.3)]';
-  };
 
   if (status === 'IDLE' || !currentPlayer) {
     return (
@@ -175,81 +157,10 @@ export const AuctionPodium = ({
           <div className="lg:col-span-4 flex flex-col justify-between space-y-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80">
             
             {/* Holographic Mini Field Graphic */}
-            <div className="relative w-full h-44 bg-emerald-950/40 border-2 border-emerald-500/30 rounded-xl overflow-hidden shadow-inner flex flex-col justify-between p-2">
-              <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] opacity-20 pointer-events-none" />
-              
-              {/* Field Markings */}
-              <div className="w-full h-full border border-emerald-500/20 rounded-lg relative">
-                {/* Halfway Line */}
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-emerald-500/30" />
-                {/* Center Circle */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border border-emerald-500/30" />
-                
-                {/* Radar Dot for Player Position */}
-                <div 
-                  className="absolute w-4 h-4 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_15px_#10b981] animate-ping"
-                  style={{ top: coords.top, left: coords.left, transform: 'translate(-50%, -50%)' }}
-                />
-                <div 
-                  className="absolute w-4 h-4 bg-emerald-400 rounded-full border-2 border-white shadow-[0_0_15px_#10b981]"
-                  style={{ top: coords.top, left: coords.left, transform: 'translate(-50%, -50%)' }}
-                />
-              </div>
-
-              <div className="absolute bottom-2 left-3 text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">
-                TACTICAL RADAR: {currentPlayer.primaryPos}
-              </div>
-            </div>
+            <TacticalRadar primaryPos={currentPlayer.primaryPos} />
 
             {/* Skill Matrix / Attribute Bars */}
-            <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 flex justify-between">
-                <span>ATTRIBUTES RATINGS</span>
-                <span className="text-emerald-400 font-bold">OVERALL: 88</span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-0.5">
-                    <span>Pace / Speed</span>
-                    <span className="text-emerald-400 font-bold">87</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full w-[87%]" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-0.5">
-                    <span>Passing & Vision</span>
-                    <span className="text-emerald-400 font-bold">85</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full w-[85%]" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-0.5">
-                    <span>Dribbling</span>
-                    <span className="text-emerald-400 font-bold">90</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full w-[90%]" />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-0.5">
-                    <span>Stamina</span>
-                    <span className="text-emerald-400 font-bold">89</span>
-                  </div>
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full w-[89%]" />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PlayerAttributesCard />
 
           </div>
 
@@ -257,15 +168,7 @@ export const AuctionPodium = ({
           <div className="lg:col-span-4 flex flex-col justify-between space-y-4 bg-slate-900/90 p-5 rounded-2xl border border-slate-800/80 shadow-2xl">
             
             {/* Live Countdown Timer */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-400 animate-bounce" />
-                <span className="text-xs font-black uppercase text-slate-300 tracking-wider">AUCTION TIMER</span>
-              </div>
-              <div className={`text-2xl font-mono font-black px-4 py-1 rounded-xl border transition-all ${getTimerColorClass(timer)}`}>
-                00:{timer.toString().padStart(2, '0')}
-              </div>
-            </div>
+            <LiveCountdown initialTimer={timer} />
 
             {/* Current Highest Bid Typography */}
             <div className="text-center space-y-1 my-auto">

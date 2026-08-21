@@ -203,6 +203,18 @@ export class AuctionEngine {
       return;
     }
 
+    // In-Memory Validation (0 DB queries)
+    const { isValid, error } = this.validateBidEligibilityInMemory(teamId, amount);
+    if (!isValid) {
+      if (senderSocket) {
+        senderSocket.emit('ERROR', error);
+        senderSocket.emit('error', error);
+      }
+      this.io.to(`team_${teamId}`).emit('ERROR', error);
+      this.io.to(`team_${teamId}`).emit('error', error);
+      return;
+    }
+
     if (this.mode === 'NORMAL') {
       // INSTANT IN-MEMORY STATE MUTATION & IMMEDIATE SOCKET BROADCAST (<1ms)
       this.currentBid = amount;
@@ -212,16 +224,6 @@ export class AuctionEngine {
       this.io.emit('BID_PLACED', { teamId, amount });
       this.io.emit('bid_placed', { teamId, amount });
       this.broadcastState();
-
-      // Background Async Database Check (does not block immediate socket emission)
-      this.enqueue(async () => {
-        await prisma.$transaction(async (tx) => {
-          const { isValid, error } = await this.validateBidEligibility(tx, teamId, amount);
-          if (!isValid) {
-            logger.warn(`Asynchronous bid eligibility check failed for team ${teamId}: ${error}`);
-          }
-        });
-      });
 
     } else if (this.mode === 'BLIND') {
       this.blindBids.set(teamId, amount);
@@ -440,6 +442,33 @@ export class AuctionEngine {
 
     const remainingSlotsAfterThisPlayer = Math.max(0, minRosterNeeded - (boughtCount + 1));
     const reserveNeeded = remainingSlotsAfterThisPlayer * lowestBasePrice;
+    const maxAllowableBid = team.budget - reserveNeeded;
+
+    if (bidAmount > maxAllowableBid) {
+      return {
+        isValid: false,
+        error: `Disqualified! Bidding $${bidAmount.toLocaleString()} leaves insufficient budget ($${(team.budget - bidAmount).toLocaleString()}) to fill min roster of ${minRosterNeeded} players (Reserve needed: $${reserveNeeded.toLocaleString()}).`
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  private validateBidEligibilityInMemory(teamId: string, bidAmount: number): { isValid: boolean, error?: string } {
+    const team = this.cachedTeams.find(t => t.id === teamId);
+    if (!team) {
+      return { isValid: false, error: 'Team not found in cache' };
+    }
+
+    if (team.budget < bidAmount) {
+      return { isValid: false, error: `Insufficient budget. Remaining: $${team.budget.toLocaleString()}` };
+    }
+
+    const minRosterNeeded = this.cachedSystem?.minRoster || 11;
+    const boughtCount = team._count?.players || 0;
+
+    const remainingSlotsAfterThisPlayer = Math.max(0, minRosterNeeded - (boughtCount + 1));
+    const reserveNeeded = remainingSlotsAfterThisPlayer * this.lowestBasePrice;
     const maxAllowableBid = team.budget - reserveNeeded;
 
     if (bidAmount > maxAllowableBid) {

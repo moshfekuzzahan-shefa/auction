@@ -7,6 +7,8 @@ import { Button } from '../../components/ui/Button';
 import { Trophy, ShieldAlert, ArrowUpRight, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuctionPodium } from '../../components/auction/AuctionPodium';
+import { PurseGuardrails } from '../../components/auction/PurseGuardrails';
+import { useCallback } from 'react';
 
 export const LiveAuction = () => {
   const queryClient = useQueryClient();
@@ -21,10 +23,6 @@ export const LiveAuction = () => {
 
     const handleState = (state: any) => {
       setAuctionState(state);
-    };
-
-    const handleTick = ({ timer }: any) => {
-      setAuctionState((prev: any) => prev ? { ...prev, timer } : null);
     };
     
     const handleBidPlaced = ({ teamId, amount }: any) => {
@@ -56,7 +54,6 @@ export const LiveAuction = () => {
     };
 
     socket.on('AUCTION_STATE', handleState);
-    socket.on('TIMER_TICK', handleTick);
     socket.on('BID_PLACED', handleBidPlaced);
     socket.on('PLAYER_SOLD', handlePlayerSold);
     socket.on('PLAYER_UNSOLD', handlePlayerUnsold);
@@ -66,7 +63,6 @@ export const LiveAuction = () => {
 
     return () => {
       socket.off('AUCTION_STATE', handleState);
-      socket.off('TIMER_TICK', handleTick);
       socket.off('BID_PLACED', handleBidPlaced);
       socket.off('PLAYER_SOLD', handlePlayerSold);
       socket.off('PLAYER_UNSOLD', handlePlayerUnsold);
@@ -76,11 +72,13 @@ export const LiveAuction = () => {
     };
   }, [socket]);
 
-  const placeBid = (amount: number) => {
+  const myTeam = auctionState?.teams?.find((t: any) => t.managerId === user?.id);
+
+  const placeBid = useCallback((amount: number) => {
     if (socket) {
       socket.emit('PLACE_BID', { amount, teamId: myTeam?.id });
     }
-  };
+  }, [socket, myTeam?.id]);
 
   if (!auctionState || auctionState.status === 'IDLE') {
     return (
@@ -101,7 +99,7 @@ export const LiveAuction = () => {
   const minRosterNeeded = auctionState.minRoster || 11;
   const lowestBasePrice = auctionState.lowestBasePrice || 250;
 
-  const myTeam = auctionState.teams?.find((t: any) => t.managerId === user?.id);
+
   const currentBoughtCount = myTeam?._count?.players || 0;
   const remainingBudget = myTeam?.budget || 0;
 
@@ -124,54 +122,17 @@ export const LiveAuction = () => {
 
       {/* Team Manager Guardrails & Bidding Control Bar */}
       {user?.role === 'TEAM_MANAGER' && myTeam && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          
-          <Card className="bg-slate-900/90 border-slate-800">
-            <CardHeader className="bg-slate-950/80 border-b border-slate-800 py-3">
-              <CardTitle className="text-xs uppercase font-extrabold tracking-wider text-slate-400 flex items-center justify-between">
-                <span>My Team Purse Guardrails</span>
-                <UserCheck className="w-4 h-4 text-emerald-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-2 text-xs">
-              <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-slate-800">
-                <span className="text-slate-400 font-medium">Players Bought:</span>
-                <span className="font-extrabold text-white">{currentBoughtCount} / {minRosterNeeded} Needed</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-slate-800">
-                <span className="text-slate-400 font-medium">Remaining Purse:</span>
-                <span className="font-extrabold text-emerald-400">${remainingBudget.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center p-2 bg-slate-950 rounded-xl border border-slate-800">
-                <span className="text-slate-400 font-medium">Max Allowed Bid:</span>
-                <span className="font-extrabold text-amber-400">${maxAllowableBid.toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-900/90 border-slate-800 flex flex-col justify-center p-6 space-y-3">
-            <h3 className="text-xs uppercase font-black tracking-wider text-slate-400">Quick Bid Action</h3>
-            <Button 
-              size="lg" 
-              onClick={() => placeBid(nextValidBid)}
-              disabled={nextValidBid > maxAllowableBid || auctionState.status !== 'ACTIVE'}
-              className="w-full h-14 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black text-base rounded-xl shadow-lg shadow-emerald-950/50 flex items-center justify-center space-x-2 border border-emerald-400/30"
-            >
-              <span>
-                Place Bid ({auctionState?.incrementType === 'FIXED' ? `+$${(auctionState?.incrementValue || 100).toLocaleString()}` : `+${auctionState?.incrementValue || 10}%`} / ${nextValidBid.toLocaleString()})
-              </span>
-              <ArrowUpRight className="w-5 h-5" />
-            </Button>
-
-            {nextValidBid > maxAllowableBid && (
-              <div className="p-2.5 bg-red-950/50 border border-red-800/50 text-red-300 text-xs font-semibold rounded-xl flex items-center space-x-2">
-                <ShieldAlert className="w-4 h-4 shrink-0 text-red-400" />
-                <span>Bid exceeds your Max Allowable Bid (${maxAllowableBid.toLocaleString()})!</span>
-              </div>
-            )}
-          </Card>
-
-        </div>
+        <PurseGuardrails
+          currentBoughtCount={currentBoughtCount}
+          minRosterNeeded={minRosterNeeded}
+          remainingBudget={remainingBudget}
+          maxAllowableBid={maxAllowableBid}
+          nextValidBid={nextValidBid}
+          auctionStateStatus={auctionState.status}
+          incrementType={auctionState.incrementType}
+          incrementValue={auctionState.incrementValue}
+          onPlaceBid={placeBid}
+        />
       )}
 
     </div>
