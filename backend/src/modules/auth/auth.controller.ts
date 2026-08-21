@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { sendSuccessResponse, sendErrorResponse } from '../../utils/apiResponse';
 import { AuthRequest } from '../../middleware/auth.middleware';
 import { AuditService } from '../../services/audit.service';
+import { verifyToken } from '../../utils/jwt';
 
 export class AuthController {
   static async login(req: Request, res: Response, next: NextFunction) {
@@ -97,6 +98,33 @@ export class AuthController {
       return sendSuccessResponse({ res, message: result.message });
     } catch (error: any) {
       return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
+  static async refreshToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.cookies?.refreshToken;
+      if (!token) {
+        return sendErrorResponse({ res, statusCode: 401, message: 'No refresh token provided' });
+      }
+
+      const decoded = verifyToken(token);
+      if (!decoded || !decoded.id) {
+        return sendErrorResponse({ res, statusCode: 401, message: 'Invalid refresh token' });
+      }
+
+      const accessToken = await AuthService.refreshAuthToken(token, decoded.id);
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000 // 15 mins
+      });
+
+      return sendSuccessResponse({ res, message: 'Token refreshed', data: { accessToken } });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 401, message: error.message });
     }
   }
 

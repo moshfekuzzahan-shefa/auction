@@ -8,7 +8,23 @@ export class PublicController {
       const data = await PublicService.getLandingPageData();
       return sendSuccessResponse({ res, message: data.message, data });
     } catch (error: any) {
-      return sendErrorResponse({ res, statusCode: 500, message: error.message });
+      const fallbackData = {
+        phase: 'SETUP',
+        message: 'System not initialized or data unavailable',
+        announcement: 'Welcome to the platform',
+        schedule: {
+          registrationStart: null,
+          registrationEnd: null,
+          auctionStart: null,
+          auctionEnd: null
+        },
+        data: {
+          categories: [],
+          positions: [],
+          teams: []
+        }
+      };
+      return sendSuccessResponse({ res, message: fallbackData.message, data: fallbackData });
     }
   }
 
