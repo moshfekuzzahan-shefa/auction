@@ -73,45 +73,23 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', server: 'auctionbyshefa', timestamp: Date.now(), uptime: Math.floor(process.uptime()) });
 });
 
-import RedisStore from 'rate-limit-redis';
-import { createClient } from 'redis';
-
-// Safe Redis rate-limiting setup with in-memory fallback
-let limiterStore: any = undefined;
-
-if (process.env.REDIS_URL) {
-  try {
-    const redisClient = createClient({ url: process.env.REDIS_URL });
-    redisClient.on('error', (err) => console.warn('Redis Client Warning:', err?.message || err));
-    redisClient.connect().catch((err) => console.warn('Redis connection deferred:', err?.message));
-
-    limiterStore = new RedisStore({
-      sendCommand: async (...args: string[]) => {
-        try {
-          if (redisClient.isOpen) {
-            return await redisClient.sendCommand(args);
-          }
-        } catch (e) {
-          console.warn('Redis sendCommand failed, falling back:', e);
-        }
-        return undefined as any;
-      },
-    });
-  } catch (err) {
-    console.warn('Failed to initialize RedisStore:', err);
-  }
-}
-
-// Rate limiting setup (falls back to memory if Redis is unavailable)
-const limiter = rateLimit({
-  ...(limiterStore ? { store: limiterStore } : {}),
+// Rate limiting setup using default MemoryStore for stability
+export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Exclude Critical Public & Socket Routes
+    const path = req.originalUrl || req.url;
+    if (path.startsWith('/api/public') || path.startsWith('/api/socket') || path.includes('/socket.io')) {
+      return true;
+    }
+    return false;
+  }
 });
 
-app.use('/api', limiter);
+app.use('/api', apiLimiter);
 
 // Mount main routing architecture
 app.use('/api', routes);
