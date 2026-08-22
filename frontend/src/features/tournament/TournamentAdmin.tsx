@@ -3,13 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import api from '../../services/api';
 import { MatchResultAdminModal } from './MatchResultAdminModal';
+import { TournamentLeaderboard } from './TournamentLeaderboard';
+import { MatchSummaryModal } from '../../components/tournament/MatchSummaryModal';
 
 export const TournamentAdmin = () => {
   const queryClient = useQueryClient();
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [selectedFinishedMatch, setSelectedFinishedMatch] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('matches');
+  const [matchesFilter, setMatchesFilter] = useState('active');
 
   // We fetch public landing data to get the list of matches since it's already there
   const { data: landingData, isLoading } = useQuery({
@@ -75,13 +81,27 @@ export const TournamentAdmin = () => {
   const matches = landingData?.data?.matches;
   if (!matches) return <div className="p-8">No matches available.</div>;
 
-  const allMatches = [...(matches.live || []), ...(matches.upcoming || [])];
+  const activeMatches = [...(matches.live || []), ...(matches.upcoming || [])];
+  const finishedMatches = matches.finished || [];
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto p-4 md:p-8">
+      <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Tournament Match Engine</h1>
+        
+        <TabsList className="grid w-[400px] grid-cols-2">
+          <TabsTrigger value="matches" active={activeTab === 'matches'} onTabChange={setActiveTab}>📅 Matches & Fixtures</TabsTrigger>
+          <TabsTrigger value="leaderboard" active={activeTab === 'leaderboard'} onTabChange={setActiveTab}>🏆 Tournament Leaderboard</TabsTrigger>
+        </TabsList>
+      </div>
 
-      <Card>
+      {activeTab === 'leaderboard' && (
+        <TournamentLeaderboard />
+      )}
+
+      {activeTab === 'matches' && (
+        <>
+          <Card>
         <CardHeader>
           <CardTitle>Generate Fixture</CardTitle>
         </CardHeader>
@@ -152,12 +172,19 @@ export const TournamentAdmin = () => {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>Manage Matches</CardTitle>
+          <TabsList className="grid w-[300px] grid-cols-2">
+            <TabsTrigger value="active" active={matchesFilter === 'active'} onTabChange={setMatchesFilter}>Active/Upcoming</TabsTrigger>
+            <TabsTrigger value="finished" active={matchesFilter === 'finished'} onTabChange={setMatchesFilter}>Finished</TabsTrigger>
+          </TabsList>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-4">
           <div className="grid gap-4">
-            {allMatches.map((match: any) => (
+            {matchesFilter === 'active' && activeMatches.length === 0 && (
+              <div className="text-center text-muted-foreground p-4">No active or upcoming matches.</div>
+            )}
+            {matchesFilter === 'active' && activeMatches.map((match: any) => (
               <div key={match.id} className="flex items-center justify-between p-4 border rounded-md">
                 <div>
                   <span className="font-bold">{match.homeTeam.name}</span>
@@ -180,15 +207,44 @@ export const TournamentAdmin = () => {
                         setIsResultModalOpen(true);
                       }}
                     >
-                      Submit Match Result
+                      Enter Result / Log Events
                     </Button>
                   )}
                 </div>
               </div>
             ))}
+
+            {matchesFilter === 'finished' && finishedMatches.length === 0 && (
+              <div className="text-center text-muted-foreground p-4">No finished matches.</div>
+            )}
+            {matchesFilter === 'finished' && finishedMatches.map((match: any) => (
+              <div 
+                key={match.id} 
+                className="flex items-center justify-between p-4 border rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setSelectedFinishedMatch(match)}
+              >
+                <div>
+                  <span className="font-bold">{match.homeTeam.name}</span>
+                  <span className="mx-4 text-xl font-bold text-primary">{match.homeScore} - {match.awayScore}</span>
+                  <span className="font-bold">{match.awayTeam.name}</span>
+                  <div className="text-sm text-muted-foreground mt-1">Status: {match.status} | Round: {match.round}</div>
+                </div>
+                <Button variant="outline" size="sm">View Recap</Button>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {selectedFinishedMatch && (
+        <MatchSummaryModal 
+          isOpen={!!selectedFinishedMatch}
+          onClose={() => setSelectedFinishedMatch(null)}
+          match={selectedFinishedMatch}
+        />
+      )}
 
       {selectedMatch && (
         <MatchResultAdminModal
