@@ -203,43 +203,117 @@ export class TournamentService {
     });
   }
 
-  static async getPlayerStats() {
-    const events = await prisma.matchEvent.findMany({
-      include: {
-        player: { include: { user: true, team: true } },
-        assist: { include: { user: true, team: true } }
-      }
-    });
+  static async submitMatchResult(matchId: string, resultData: { homeScore: number, awayScore: number, motmPlayerId?: string, events: any[] }) {
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) throw new Error('Match not found');
 
-    const stats = new Map<string, any>();
+    const eventsToCreate: any[] = [];
+    for (const ev of resultData.events) {
+      eventsToCreate.push({
+        matchId,
+        playerId: ev.playerId,
+        assistId: ev.assistId || null,
+        type: ev.type,
+        minute: ev.minute || 0
+      });
 
-    const getStatsObj = (profile: any) => {
-      if (!stats.has(profile.id)) {
-        stats.set(profile.id, {
-          player: profile,
-          goals: 0,
-          assists: 0,
-          yellowCards: 0,
-          redCards: 0,
-          cleanSheets: 0,
+      if (ev.type === 'GOAL' && ev.assistId) {
+        eventsToCreate.push({
+          matchId,
+          playerId: ev.assistId,
+          assistId: null,
+          type: 'ASSIST',
+          minute: ev.minute || 0
         });
-      }
-      return stats.get(profile.id);
-    };
-
-    for (const event of events) {
-      const pStat = getStatsObj(event.player);
-      if (event.type === 'GOAL') pStat.goals++;
-      if (event.type === 'YELLOW_CARD') pStat.yellowCards++;
-      if (event.type === 'RED_CARD') pStat.redCards++;
-      if (event.type === 'CLEAN_SHEET') pStat.cleanSheets++;
-
-      if (event.assist) {
-        const aStat = getStatsObj(event.assist);
-        aStat.assists++;
       }
     }
 
-    return Array.from(stats.values());
+    return prisma.$transaction(async (tx) => {
+      if (eventsToCreate.length > 0) {
+        await tx.matchEvent.createMany({
+          data: eventsToCreate
+        });
+      }
+
+      const updatedMatch = await tx.match.update({
+        where: { id: matchId },
+        data: {
+          homeScore: resultData.homeScore,
+          awayScore: resultData.awayScore,
+          motmPlayerId: resultData.motmPlayerId || null,
+          status: 'FINISHED'
+        }
+      });
+
+      return updatedMatch;
+    }).then(async (result) => {
+      await this.recalculateStandings();
+      return result;
+    });
+  }
+
+  static async getLeaderboardStats() {
+    const goalsGroups = await prisma.matchEvent.groupBy({
+      by: ['playerId'],
+      where: { type: 'GOAL', match: { status: 'FINISHED' } },
+      _count: { type: true },
+    });
+
+    const assistsGroups = await prisma.matchEvent.groupBy({
+      by: ['playerId'],
+      where: { type: 'ASSIST', match: { status: 'FINISHED' } },
+      _count: { type: true },
+    });
+
+    const missesGroups = await prisma.matchEvent.groupBy({
+      by: ['playerId'],
+      where: { type: 'MISS', match: { status: 'FINISHED' } },
+      _count: { type: true },
+    });
+
+    const motmGroups = await prisma.match.groupBy({
+      by: ['motmPlayerId'],
+      where: { motmPlayerId: { not: null }, status: 'FINISHED' },
+      _count: { motmPlayerId: true },
+    });
+
+    const allPlayers = await prisma.profile.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+        team: { include: { standing: { select: { played: true } } } },
+        category: { select: { name: true } }
+      }
+    });
+
+    const playerMap = new Map();
+    allPlayers.forEach(p => playerMap.set(p.id, p));
+
+    const mapWithPlayer = (groups: any[], countField: string, mapCountKey: string) => {
+      return groups.map(g => {
+        const pId = g.playerId || g.motmPlayerId;
+        const p = playerMap.get(pId);
+        return {
+          playerId: pId,
+          name: p?.user?.name || 'Unknown',
+          imageUrl: p?.imageUrl || null,
+          teamName: p?.team?.name || 'Unassigned',
+          teamLogo: p?.team?.logoUrl || null,
+          played: p?.team?.standing?.played || 0,
+          category: p?.category?.name || 'Unassigned',
+          [countField]: Number(g._count[mapCountKey])
+        };
+      }).sort((a, b) => {
+        if (b[countField] !== a[countField]) return b[countField] - a[countField];
+        if (a.played !== b.played) return a.played - b.played; 
+        return a.name.localeCompare(b.name);
+      });
+    };
+
+    return {
+      topScorers: mapWithPlayer(goalsGroups, 'goals', 'type').slice(0, 10),
+      topAssists: mapWithPlayer(assistsGroups, 'assists', 'type').slice(0, 10),
+      mostMisses: mapWithPlayer(missesGroups, 'misses', 'type').slice(0, 10),
+      motmKings: mapWithPlayer(motmGroups, 'motmAwards', 'motmPlayerId').slice(0, 10)
+    };
   }
 }

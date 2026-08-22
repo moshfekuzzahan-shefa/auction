@@ -61,6 +61,22 @@ export class TournamentController {
     }
   }
 
+  static async submitMatchResult(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { homeScore, awayScore, motmPlayerId, events } = req.body;
+      
+      if (homeScore === undefined || awayScore === undefined || !events) {
+        return sendErrorResponse({ res, statusCode: 400, message: 'Missing required result fields.' });
+      }
+
+      const match = await TournamentService.submitMatchResult(id as string, { homeScore, awayScore, motmPlayerId, events });
+      return sendSuccessResponse({ res, statusCode: 201, message: 'Match result submitted successfully', data: match });
+    } catch (error: any) {
+      return sendErrorResponse({ res, statusCode: 400, message: error.message });
+    }
+  }
+
   static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
@@ -85,9 +101,11 @@ export class TournamentController {
     }
   }
 
-  static async getPlayerStats(req: Request, res: Response, next: NextFunction) {
+
+
+  static async getLeaderboardStats(req: Request, res: Response, next: NextFunction) {
     try {
-      const stats = await TournamentService.getPlayerStats();
+      const stats = await TournamentService.getLeaderboardStats();
       return sendSuccessResponse({ res, data: stats });
     } catch (error: any) {
       return sendErrorResponse({ res, statusCode: 400, message: error.message });

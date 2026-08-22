@@ -100,7 +100,7 @@ export class PublicService {
               finished: await prisma.match.findMany({ where: { status: 'FINISHED' }, include: { homeTeam: true, awayTeam: true }, take: 10, orderBy: { updatedAt: 'desc' } })
             },
             statistics: {
-              playerStats: await TournamentService.getPlayerStats(),
+              playerStats: await TournamentService.getLeaderboardStats(),
             },
             news: await prisma.news.findMany({ orderBy: { createdAt: 'desc' }, take: 5 })
           }

@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../services/api';
+import { MatchResultAdminModal } from './MatchResultAdminModal';
 
 export const TournamentAdmin = () => {
   const queryClient = useQueryClient();
-  const [selectedMatch, setSelectedMatch] = useState<string>('');
+  const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
   // We fetch public landing data to get the list of matches since it's already there
   const { data: landingData, isLoading } = useQuery({
@@ -171,14 +173,15 @@ export const TournamentAdmin = () => {
                     </Button>
                   )}
                   {match.status === 'LIVE' && (
-                    <>
-                      <Button variant="destructive" onClick={() => updateStatusMutation.mutate({ matchId: match.id, status: 'FINISHED' })}>
-                        End Match
-                      </Button>
-                      <Button variant="secondary" onClick={() => setSelectedMatch(match.id)}>
-                        Log Event
-                      </Button>
-                    </>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => {
+                        setSelectedMatch(match);
+                        setIsResultModalOpen(true);
+                      }}
+                    >
+                      Submit Match Result
+                    </Button>
                   )}
                 </div>
               </div>
@@ -188,58 +191,14 @@ export const TournamentAdmin = () => {
       </Card>
 
       {selectedMatch && (
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle>Log Event (Match ID: {selectedMatch})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const match = allMatches.find((m: any) => m.id === selectedMatch);
-              const homeTeamData = teamsData?.find((t: any) => t.id === match?.homeTeamId);
-              const awayTeamData = teamsData?.find((t: any) => t.id === match?.awayTeamId);
-              
-              const allPlayers = [
-                ...(homeTeamData?.players || []).map((p: any) => ({ ...p, teamName: homeTeamData.name })),
-                ...(awayTeamData?.players || []).map((p: any) => ({ ...p, teamName: awayTeamData.name }))
-              ];
-
-              return (
-                <form 
-                  className="flex gap-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    logEventMutation.mutate({
-                      type: formData.get('type'),
-                      minute: Number(formData.get('minute')),
-                      playerId: formData.get('playerId'),
-                    });
-                  }}
-                >
-                  <select name="type" className="flex h-10 rounded-md border border-input bg-background px-3" required>
-                    <option value="GOAL">Goal</option>
-                    <option value="YELLOW_CARD">Yellow Card</option>
-                    <option value="RED_CARD">Red Card</option>
-                    <option value="OWN_GOAL">Own Goal</option>
-                  </select>
-                  
-                  <input name="minute" type="number" placeholder="Minute (e.g. 45)" required className="flex h-10 w-24 rounded-md border border-input bg-background px-3" />
-                  
-                  <select name="playerId" className="flex-1 h-10 rounded-md border border-input bg-background px-3" required>
-                    <option value="">Select Player...</option>
-                    {allPlayers.map((player: any) => (
-                      <option key={player.userId} value={player.userId}>
-                        {player.user.name} ({player.teamName})
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <Button type="submit" disabled={logEventMutation.isPending}>Submit Event</Button>
-                </form>
-              );
-            })()}
-          </CardContent>
-        </Card>
+        <MatchResultAdminModal
+          isOpen={isResultModalOpen}
+          onClose={() => {
+            setIsResultModalOpen(false);
+            setSelectedMatch(null);
+          }}
+          match={selectedMatch}
+        />
       )}
     </div>
   );

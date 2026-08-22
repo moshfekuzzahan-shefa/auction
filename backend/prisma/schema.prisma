@@ -61,6 +61,7 @@ model Profile {
 
   playerEvents MatchEvent[] @relation("PlayerEvent")
   assistEvents MatchEvent[] @relation("AssistEvent")
+  motmAwards   Match[]      @relation("MatchMOTM")
 }
 
 model AuditLog {
@@ -210,6 +211,9 @@ model Match {
   fixtureGroupId String?
   legNumber      Int?
 
+  motmPlayerId String?
+  motmPlayer   Profile? @relation("MatchMOTM", fields: [motmPlayerId], references: [id])
+
   events    MatchEvent[]
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -248,6 +252,8 @@ enum EventType {
   RED_CARD
   OWN_GOAL
   CLEAN_SHEET
+  MISS
+  ASSIST
 }
 
 model Standing {

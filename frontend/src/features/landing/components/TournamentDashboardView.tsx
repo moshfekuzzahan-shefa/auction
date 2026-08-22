@@ -4,6 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../../../components/ui/Badge';
 import { Trophy, CalendarClock, Activity, Users, Medal, Goal, Award } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/Tabs';
+import { TournamentLeaderboard } from '../../tournament/TournamentLeaderboard';
+import { MatchSummaryModal } from '../../../components/tournament/MatchSummaryModal';
 
 interface TournamentDashboardViewProps {
   message?: string;
@@ -12,6 +14,7 @@ interface TournamentDashboardViewProps {
 
 export const TournamentDashboardView = ({ message, data }: TournamentDashboardViewProps) => {
   const [activeTab, setActiveTab] = useState('matches');
+  const [selectedFinishedMatch, setSelectedFinishedMatch] = useState<any>(null);
 
   // Group Matches by fixtureGroupId for LEGGED
   const groupMatches = (matches: any[]) => {
@@ -152,10 +155,14 @@ export const TournamentDashboardView = ({ message, data }: TournamentDashboardVi
               <CardContent className="p-4 space-y-3">
                  {finishedMatches.length === 0 && <p className="text-muted-foreground text-center py-4">No finished matches</p>}
                  {finishedMatches.map((m: any, i: number) => (
-                  <div key={i} className="p-3 border rounded-lg flex items-center justify-between text-sm hover:bg-muted/30 transition-colors">
-                    <div className="font-medium truncate text-right flex-1">{m.homeTeam?.name}</div>
-                    <div className="px-4 font-bold text-primary">{m.isLegged ? `${m.aggregate.homeScore}-${m.aggregate.awayScore}` : `${m.homeScore}-${m.awayScore}`}</div>
-                    <div className="font-medium truncate text-left flex-1">{m.awayTeam?.name}</div>
+                  <div 
+                    key={i} 
+                    className="p-3 border rounded-lg flex items-center justify-between text-sm hover:bg-muted/30 transition-colors cursor-pointer group"
+                    onClick={() => setSelectedFinishedMatch(m)}
+                  >
+                    <div className="font-medium truncate text-right flex-1 group-hover:text-primary transition-colors">{m.homeTeam?.name}</div>
+                    <div className="px-4 font-black text-primary bg-primary/10 rounded-md py-1 mx-2">{m.isLegged ? `${m.aggregate.homeScore}-${m.aggregate.awayScore}` : `${m.homeScore}-${m.awayScore}`}</div>
+                    <div className="font-medium truncate text-left flex-1 group-hover:text-primary transition-colors">{m.awayTeam?.name}</div>
                   </div>
                 ))}
               </CardContent>
@@ -218,76 +225,17 @@ export const TournamentDashboardView = ({ message, data }: TournamentDashboardVi
       )}
 
       {activeTab === 'stats' && (
-        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
-          <Card className="shadow-md">
-            <CardHeader className="bg-primary/10 border-b pb-4">
-              <CardTitle className="flex items-center gap-2"><Goal className="w-5 h-5 text-primary" /> Golden Boot</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {topScorers.map((s: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/30">
-                    <div className="flex items-center gap-3">
-                       <span className="font-bold text-muted-foreground w-4">{i+1}</span>
-                       <div>
-                         <div className="font-bold">{s.player?.user?.name}</div>
-                         <div className="text-xs text-muted-foreground">{s.player?.team?.name}</div>
-                       </div>
-                    </div>
-                    <div className="font-black text-xl text-primary">{s.goals}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader className="bg-primary/10 border-b pb-4">
-              <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-primary" /> Playmaker</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {topAssists.map((s: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/30">
-                    <div className="flex items-center gap-3">
-                       <span className="font-bold text-muted-foreground w-4">{i+1}</span>
-                       <div>
-                         <div className="font-bold">{s.player?.user?.name}</div>
-                         <div className="text-xs text-muted-foreground">{s.player?.team?.name}</div>
-                       </div>
-                    </div>
-                    <div className="font-black text-xl text-primary">{s.assists}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader className="bg-destructive/10 border-b pb-4">
-              <CardTitle className="flex items-center gap-2 text-destructive"><Activity className="w-5 h-5" /> Discipline</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {topCards.map((s: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/30">
-                    <div className="flex items-center gap-3">
-                       <span className="font-bold text-muted-foreground w-4">{i+1}</span>
-                       <div>
-                         <div className="font-bold">{s.player?.user?.name}</div>
-                         <div className="text-xs text-muted-foreground">{s.player?.team?.name}</div>
-                       </div>
-                    </div>
-                    <div className="flex gap-2 font-bold text-sm">
-                      {s.yellowCards > 0 && <span className="text-yellow-600 bg-yellow-100 px-2 rounded">{s.yellowCards} Y</span>}
-                      {s.redCards > 0 && <span className="text-red-600 bg-red-100 px-2 rounded">{s.redCards} R</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="max-w-7xl mx-auto">
+          <TournamentLeaderboard />
         </div>
+      )}
+
+      {selectedFinishedMatch && (
+        <MatchSummaryModal 
+          isOpen={!!selectedFinishedMatch}
+          onClose={() => setSelectedFinishedMatch(null)}
+          match={selectedFinishedMatch}
+        />
       )}
     </div>
   );
